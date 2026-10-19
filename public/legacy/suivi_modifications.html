@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi des Modifications — Maintenance Préventive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f9fc;
+    --panel:#ffffff;
+    --panel-alt:#f1f5fb;
+    --border:#e2e8f4;
+    --border-soft:#e8edf7;
+    --text:#0a1930;
+    --text-dim:#44537a;
+    --text-faint:#8896b3;
+    --amber:#f0b429;
+    --amber-dim:#fdf1e2;
+    --teal:#2f80c9;
+    --teal-dim:#e4edf3;
+    --blue:#2f6690;
+    --blue-dim:#e4edf3;
+    --red:#d6455a;
+    --red-dim:#fbe9ec;
+    --mono:'IBM Plex Mono', monospace;
+    --sans:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  ::selection{background:var(--amber);color:#f7f9fc;}
+
+  /* ---------- HEADER ---------- */
+  header{
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,#e2e8f4 0%,#f7f9fc 100%);
+    padding:22px 32px 18px;
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;
+  }
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase;margin:0 0 6px;}
+  h1{font-size:22px;margin:0;font-weight:600;letter-spacing:-.01em;}
+  .subtitle{color:var(--text-dim);font-size:13px;margin-top:4px;}
+  .campaign{display:flex;align-items:center;gap:10px;font-family:var(--mono);}
+  .campaign label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;}
+  .campaign input{
+    background:var(--panel-alt);border:1px solid var(--border);color:var(--amber);
+    font-family:var(--mono);font-size:15px;font-weight:600;padding:6px 10px;width:80px;border-radius:8px;
+  }
+
+  main{max-width:1320px;margin:0 auto;padding:26px 32px 60px;}
+  section{margin-bottom:30px;}
+  .section-title{
+    font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text-faint);margin:0 0 12px;display:flex;align-items:center;gap:10px;
+  }
+  .section-title::after{content:"";flex:1;height:1px;background:var(--border-soft);}
+
+  /* ---------- LAMP CLUSTER (signature element) ---------- */
+  .lamps{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;}
+  .lamp{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:16px 10px 14px;text-align:center;cursor:pointer;
+    transition:border-color .15s, transform .15s, box-shadow .15s, background .15s;
+    position:relative;
+  }
+  .lamp:hover{border-color:var(--teal);transform:translateY(-2px);box-shadow:0 10px 22px -14px rgba(47,102,144,.4);}
+  .lamp.active{border-color:var(--amber);background:var(--amber-dim);}
+  .lamp.active::before{content:"";position:absolute;top:8px;right:8px;width:6px;height:6px;background:var(--amber);border-radius:50%;box-shadow:0 0 0 3px rgba(240,180,41,.18);}
+  .lamp svg{display:block;margin:0 auto 6px;}
+  .lamp-code{font-family:var(--mono);font-weight:650;font-size:13px;letter-spacing:.04em;}
+  .lamp-count{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:2px;}
+
+  /* ---------- IMPORT ZONE ---------- */
+  .import-zone{
+    border:1px dashed var(--border);border-radius:12px;padding:22px;background:var(--panel);
+    display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+  }
+  .import-zone.drag{border-color:var(--amber);background:var(--panel-alt);}
+  .import-icon{font-family:var(--mono);font-size:26px;color:var(--text-faint);line-height:1;}
+  .import-text{flex:1;min-width:240px;}
+  .import-text b{color:var(--text);}
+  .import-text p{margin:4px 0 0;color:var(--text-dim);font-size:12.5px;}
+  .btn{
+    font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;
+    background:var(--amber);color:#f7f9fc;border:none;padding:10px 16px;border-radius:8px;
+    cursor:pointer;font-weight:600;transition:filter .1s;
+  }
+  .btn:hover{filter:brightness(1.1);}
+  .btn.secondary{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+  .btn.secondary:hover{color:var(--text);border-color:var(--text-dim);}
+  .btn.danger{background:transparent;color:var(--red);border:1px solid var(--red-dim);}
+  .btn.danger:hover{background:var(--red-dim);}
+  #fileInput{display:none;}
+  .file-list{margin-top:14px;font-family:var(--mono);font-size:12px;}
+  .file-chip{
+    display:inline-flex;align-items:center;gap:8px;background:var(--panel-alt);border:1px solid var(--border);
+    padding:5px 9px;border-radius:8px;margin:4px 6px 0 0;color:var(--text-dim);
+  }
+  .file-chip b{color:var(--text);}
+  .file-chip span.rm{cursor:pointer;color:var(--red);}
+
+  /* ---------- KPI STRIP ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+  .kpi .val{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.02em;}
+  .kpi .lbl{font-size:11px;color:var(--text-dim);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;}
+  .kpi.c-amber .val{color:var(--amber);}
+  .kpi.c-blue .val{color:var(--blue);}
+  .kpi.c-teal .val{color:var(--teal);}
+  .kpi.c-red .val{color:var(--red);}
+
+  /* ---------- CHARTS ---------- */
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .chart-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+  .chart-card h3{font-size:12px;margin:0 0 16px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);font-weight:600;}
+  .donut-row{display:flex;align-items:center;gap:22px;}
+  .legend{font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;gap:8px;}
+  .legend-item{display:flex;align-items:center;gap:8px;color:var(--text-dim);}
+  .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .legend-item b{color:var(--text);margin-left:auto;padding-left:14px;}
+  .bar-meter{margin-bottom:14px;}
+  .bar-meter:last-child{margin-bottom:0;}
+  .bar-meter-head{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:5px;font-family:var(--mono);}
+  .bar-meter-head b{color:var(--text);}
+  .bar-track{height:8px;background:var(--panel-alt);border:1px solid var(--border-soft);border-radius:8px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--blue);}
+
+  /* ---------- FILTERS ---------- */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}
+  .filters select, .filters input[type=text]{
+    background:var(--panel-alt);border:1px solid var(--border);color:var(--text);
+    font-family:var(--sans);font-size:12.5px;padding:7px 9px;border-radius:8px;
+  }
+  .filters input[type=text]{min-width:180px;}
+  .result-count{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+
+  /* ---------- TABLE ---------- */
+  .table-wrap{border:1px solid var(--border);border-radius:14px;overflow:auto;max-height:560px;background:var(--panel);}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;}
+  thead th{
+    position:sticky;top:0;background:#e8edf7;text-align:left;padding:10px 12px;
+    font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--text-dim);border-bottom:1px solid var(--border);white-space:nowrap;
+  }
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--border-soft);vertical-align:top;color:var(--text);max-width:220px;}
+  tbody tr:hover{background:var(--panel-alt);}
+  .cell-muted{color:var(--text-dim);}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:3px 7px;border-radius:8px;display:inline-block;white-space:nowrap;letter-spacing:.02em;}
+  .tag.st-attente{background:var(--amber-dim);color:var(--amber);}
+  .tag.st-cours{background:var(--blue-dim);color:var(--blue);}
+  .tag.st-valide{background:var(--teal-dim);color:var(--teal);}
+  .tag.st-rejete{background:var(--red-dim);color:var(--red);}
+  .tag.st-integre{background:#e2f7ee;color:#1f9d6f;}
+  select.edit-status{
+    background:var(--panel-alt);border:1px solid var(--border);color:var(--text);
+    font-family:var(--mono);font-size:11px;padding:4px 6px;border-radius:8px;
+  }
+  input.edit-date, textarea.edit-obs{
+    background:var(--panel-alt);border:1px solid var(--border);color:var(--text);
+    font-family:var(--sans);font-size:11.5px;padding:4px 6px;border-radius:8px;width:100%;
+  }
+  textarea.edit-obs{resize:vertical;min-height:32px;}
+  .empty-state{padding:60px 20px;text-align:center;color:var(--text-faint);font-family:var(--mono);font-size:13px;}
+
+  footer{
+    border-top:1px solid var(--border);padding:16px 32px;display:flex;justify-content:space-between;
+    align-items:center;flex-wrap:wrap;gap:10px;color:var(--text-faint);font-size:11.5px;font-family:var(--mono);
+  }
+  footer .actions{display:flex;gap:10px;}
+
+  @media (max-width:900px){
+    .lamps{grid-template-columns:repeat(4,1fr);}
+    .kpis{grid-template-columns:repeat(3,1fr);}
+    .charts{grid-template-columns:1fr;}
+  }
+
+/* ===== Ambient background — shared across the whole site (source: Suivi des Performances) ===== */
+.bg-balls{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ball{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform;}
+.ball-1{width:400px;height:400px;background:radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);top:-120px;left:100px;animation:blob-drift-1 28s ease-in-out infinite;}
+.ball-2{width:320px;height:320px;background:radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);top:20%;right:-80px;animation:blob-drift-2 34s ease-in-out infinite;}
+.ball-3{width:300px;height:300px;background:radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);bottom:10%;left:8%;animation:blob-drift-3 38s ease-in-out infinite;}
+.ball-4{width:280px;height:280px;background:radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);top:52%;right:25%;animation:blob-drift-4 30s ease-in-out infinite;}
+@keyframes blob-drift-1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}25%{transform:translate(60px,80px) scale(1.08) rotate(3deg);}50%{transform:translate(-30px,120px) scale(.96) rotate(-2deg);}75%{transform:translate(80px,40px) scale(1.05) rotate(1deg);}}
+@keyframes blob-drift-2{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(-80px,60px) scale(1.1);}66%{transform:translate(-50px,100px) scale(.93);}}
+@keyframes blob-drift-3{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}40%{transform:translate(70px,-60px) scale(1.07) rotate(-4deg);}80%{transform:translate(110px,-90px) scale(.94) rotate(2deg);}}
+@keyframes blob-drift-4{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,50px) scale(1.12);}}
+@media (prefers-reduced-motion: reduce){.ball{animation:none !important;}}
+/* .bg-balls is position:fixed with z-index:0, which by CSS stacking rules
+   can render ABOVE plain unpositioned content — this forces every other
+   direct child of body to stack above it regardless of the page's own
+   wrapper class names. */
+body > *:not(.bg-balls){position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<div class="bg-balls" aria-hidden="true"><div class="ball ball-1"></div><div class="ball ball-2"></div><div class="ball ball-3"></div><div class="ball ball-4"></div></div>
+
+
+<header>
+  <div>
+    <p class="eyebrow">Direction Maintenance — DG</p>
+    <h1>Suivi des demandes de modification</h1>
+    <p class="subtitle">Plan de maintenance préventive · Plan de charge · Fiches MP · Déclenchements GMAO</p>
+  </div>
+  <div class="campaign">
+    <label>Campagne</label>
+    <input type="number" id="campaignYear" value="2026">
+  </div>
+</header>
+
+<main>
+
+  <section>
+    <p class="section-title">Unités opérationnelles</p>
+    <div class="lamps" id="lampCluster"></div>
+  </section>
+
+  <section>
+    <p class="section-title">Import des fichiers unités</p>
+    <div class="import-zone" id="dropZone">
+      <div class="import-icon">⭳</div>
+      <div class="import-text">
+        <b>Déposez ici les 7 fichiers Excel des unités</b>
+        <p>Format attendu : modèle « Suivi_Modifications_Maintenance_Preventive.xlsx » rempli par chaque unité (ALG, ORN, CST, SBA, ORG, STF, MGM). Les imports successifs mettent à jour les demandes déjà connues (par N° Demande).</p>
+        <div class="file-list" id="fileList"></div>
+      </div>
+      <button class="btn" onclick="document.getElementById('fileInput').click()">Choisir des fichiers</button>
+      <input type="file" id="fileInput" multiple accept=".xlsx,.xls">
+    </div>
+  </section>
+
+  <section>
+    <p class="section-title">Synthèse</p>
+    <div class="kpis" id="kpiStrip"></div>
+  </section>
+
+  <section>
+    <p class="section-title">Répartition</p>
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Par statut de traitement</h3>
+        <div class="donut-row">
+          <svg id="statusDonut" width="140" height="140" viewBox="0 0 140 140"></svg>
+          <div class="legend" id="statusLegend"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Par type de document concerné</h3>
+        <div id="typeBars"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Par système</h3>
+        <div id="systemBars"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-title">Registre des demandes</p>
+    <div class="filters">
+      <select id="fUnite"><option value="">Unité — Toutes</option></select>
+      <select id="fType"><option value="">Type de document — Tous</option></select>
+      <select id="fSysteme"><option value="">Système — Tous</option></select>
+      <select id="fIngenieur"><option value="">Ingénieur en charge — Tous</option></select>
+      <select id="fNature"><option value="">Nature — Toutes</option></select>
+      <select id="fStatut"><option value="">Statut — Tous</option></select>
+      <input type="text" id="fSearch" placeholder="Rechercher (équipement, réf, mot-clé…)">
+      <button class="btn secondary" onclick="resetFilters()">Réinitialiser</button>
+      <span class="result-count" id="resultCount"></span>
+    </div>
+
+    <div class="table-wrap" style="margin-top:12px;">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>N° Demande</th><th>Unité</th><th>Date</th><th>Demandeur</th>
+            <th>Type document</th><th>Système</th><th>Ingénieur en charge</th>
+            <th>Lien du document</th><th>Référence document</th><th>Désignation</th>
+            <th>Nature</th><th>Périod. actuelle</th><th>Périod. proposée</th>
+            <th>Existant</th><th>Modification proposée</th><th>Motif</th><th>Justification</th>
+            <th>Statut</th><th>Date traitement DG</th><th>Observations DG</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>Stockage local au navigateur — les données restent sur ce poste tant qu'elles ne sont pas exportées.</span>
+  <div class="actions">
+    <button class="btn secondary" onclick="exportConsolidated()">Exporter le consolidé (.xlsx)</button>
+    <button class="btn danger" onclick="clearAll()">Vider les données</button>
+  </div>
+</footer>
+
+<script>
+const UNITES = ["ALG","ORN","CST","SBA","ORG","STF","MGM"];
+const TYPES_DOC = ["Plan de Maintenance Préventive","Plan de Charge","Fiche de Maintenance Préventive","Déclenchement GMAO"];
+const NATURES = ["Ajout","Suppression","Modification périodicité","Modification gamme opératoire","Autre"];
+const STATUTS = ["En attente","En cours d'analyse","Validé","Rejeté","Intégré GMAO"];
+const SYSTEMES = ["CFA","Billettique","CFO","ELM","LAC","BO","VOIE"];
+const ENGINEER_MAP = {
+  "CFA":"Salaheddine SEDDAOUI",
+  "Billettique":"Salaheddine SEDDAOUI",
+  "CFO":"Billel CHIKH",
+  "ELM":"Brahim BOUNOUA",
+  "LAC":"Brahim BOUNOUA",
+  "BO":"Brahim BOUNOUA",
+  "VOIE":"Ahlem DJOUHRI"
+};
+const INGENIEURS = [...new Set(Object.values(ENGINEER_MAP))];
+
+const STATUS_COLOR = {
+  "En attente": "var(--amber)",
+  "En cours d'analyse": "var(--blue)",
+  "Validé": "var(--teal)",
+  "Rejeté": "var(--red)",
+  "Intégré GMAO": "#1f9d6f",
+  "": "var(--text-faint)"
+};
+const STATUS_TAGCLASS = {
+  "En attente":"st-attente","En cours d'analyse":"st-cours","Validé":"st-valide",
+  "Rejeté":"st-rejete","Intégré GMAO":"st-integre"
+};
+
+const HEADER_MAP = {
+  "N° Demande":"id_demande","Unité":"unite","Date de la demande":"date_demande",
+  "Demandeur (Nom, Fonction)":"demandeur","Type de document concerné":"type_doc",
+  "Système":"systeme","Ingénieur en charge":"ingenieur","Lien du document":"lien_document",
+  "Référence document":"reference","Désignation équipement":"designation",
+  "Nature de la modification":"nature","Périodicité actuelle":"periodicite_actuelle",
+  "Périodicité proposée":"periodicite_proposee","Description de l'existant":"existant",
+  "Description de la modification proposée":"modification_proposee",
+  "Motif de la modification":"motif","Justification":"justification",
+  "Statut (réservé DG)":"statut","Date de traitement DG":"date_traitement",
+  "Observations DG":"observations"
+};
+
+let STATE = { requests: [], files: [] };
+let FILTERS = { unite:"", type_doc:"", systeme:"", ingenieur:"", nature:"", statut:"", search:"" };
+
+const STORAGE_KEY = "suivi_modif_maintenance_v1";
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) STATE = JSON.parse(raw);
+  }catch(e){ console.error("Lecture stockage local impossible", e); }
+}
+function persist(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }
+  catch(e){ console.error("Écriture stockage local impossible", e); }
+}
+
+function excelDateToStr(v){
+  if(v===undefined || v===null || v==="") return "";
+  if(typeof v === "number"){
+    const d = XLSX.SSF.parse_date_code(v);
+    if(!d) return String(v);
+    const mm = String(d.m).padStart(2,"0"), dd = String(d.d).padStart(2,"0");
+    return `${d.y}-${mm}-${dd}`;
+  }
+  return String(v);
+}
+
+function handleFiles(fileList){
+  [...fileList].forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:false});
+        const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes("demande")) || wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {range:1, defval:""}); // skip legend banner row
+        let added = 0, updated = 0;
+        rows.forEach(row=>{
+          const rec = {};
+          Object.keys(row).forEach(k=>{
+            const key = HEADER_MAP[k.trim()];
+            if(key) rec[key] = row[k];
+          });
+          if(!rec.id_demande || !rec.unite) return; // ignore blank/trailing rows
+          rec.date_demande = excelDateToStr(rec.date_demande);
+          rec.date_traitement = excelDateToStr(rec.date_traitement);
+          if(!rec.statut) rec.statut = "En attente";
+          if(!rec.ingenieur && rec.systeme) rec.ingenieur = ENGINEER_MAP[rec.systeme] || "";
+          const idx = STATE.requests.findIndex(r => r.id_demande === rec.id_demande);
+          if(idx >= 0){ STATE.requests[idx] = {...STATE.requests[idx], ...rec}; updated++; }
+          else { STATE.requests.push(rec); added++; }
+        });
+        if(!STATE.files.includes(file.name)) STATE.files.push(file.name);
+        persist();
+        renderAll();
+        logImport(file.name, added, updated);
+      }catch(err){
+        alert(`Impossible de lire "${file.name}". Vérifiez qu'il s'agit bien du modèle attendu.\n(${err.message})`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function logImport(name, added, updated){
+  const list = document.getElementById("fileList");
+  const chip = document.createElement("span");
+  chip.className = "file-chip";
+  chip.innerHTML = `<b>${name}</b> · ${added} nouvelles, ${updated} mises à jour`;
+  list.appendChild(chip);
+}
+
+function renderFileChips(){
+  const list = document.getElementById("fileList");
+  list.innerHTML = "";
+  STATE.files.forEach(name=>{
+    const chip = document.createElement("span");
+    chip.className = "file-chip";
+    chip.innerHTML = `<b>${name}</b> <span class="rm" onclick="removeFile('${name.replace(/'/g,"\\'")}')">✕</span>`;
+    list.appendChild(chip);
+  });
+}
+function removeFile(name){
+  STATE.files = STATE.files.filter(f=>f!==name);
+  persist(); renderFileChips();
+}
+
+function getFiltered(){
+  return STATE.requests.filter(r=>{
+    if(FILTERS.unite && r.unite !== FILTERS.unite) return false;
+    if(FILTERS.type_doc && r.type_doc !== FILTERS.type_doc) return false;
+    if(FILTERS.systeme && r.systeme !== FILTERS.systeme) return false;
+    if(FILTERS.ingenieur && r.ingenieur !== FILTERS.ingenieur) return false;
+    if(FILTERS.nature && r.nature !== FILTERS.nature) return false;
+    if(FILTERS.statut && r.statut !== FILTERS.statut) return false;
+    if(FILTERS.search){
+      const hay = [r.reference,r.designation,r.justification,r.motif,r.existant,r.modification_proposee,r.demandeur,r.systeme]
+        .join(" ").toLowerCase();
+      if(!hay.includes(FILTERS.search.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+function renderLamps(){
+  const cluster = document.getElementById("lampCluster");
+  cluster.innerHTML = "";
+  UNITES.forEach(u=>{
+    const items = STATE.requests.filter(r=>r.unite===u);
+    const total = items.length;
+    const done = items.filter(r=>r.statut==="Intégré GMAO"||r.statut==="Validé").length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    const color = total===0 ? "var(--text-faint)" : pct>=66 ? "var(--teal)" : pct>=33 ? "var(--amber)" : "var(--red)";
+    const r = 26, c = 2*Math.PI*r;
+    const offset = c - (pct/100)*c;
+    const div = document.createElement("div");
+    div.className = "lamp" + (FILTERS.unite===u ? " active":"");
+    div.onclick = ()=>{ FILTERS.unite = FILTERS.unite===u ? "" : u; syncFilterInputs(); renderAll(); };
+    div.innerHTML = `
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--border-soft)" stroke-width="5"/>
+        <circle cx="32" cy="32" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+          stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round"
+          transform="rotate(-90 32 32)"/>
+        <text x="32" y="37" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--text)" font-weight="600">${total}</text>
+      </svg>
+      <div class="lamp-code">${u}</div>
+      <div class="lamp-count">${pct}% traité</div>
+    `;
+    cluster.appendChild(div);
+  });
+}
+
+function renderKpis(){
+  const all = STATE.requests;
+  const count = s => all.filter(r=>r.statut===s).length;
+  const total = all.length;
+  const integre = count("Intégré GMAO");
+  const taux = total ? Math.round((integre/total)*100) : 0;
+  const kpis = [
+    {lbl:"Total demandes", val: total, cls:""},
+    {lbl:"En attente", val: count("En attente"), cls:"c-amber"},
+    {lbl:"En cours d'analyse", val: count("En cours d'analyse"), cls:"c-blue"},
+    {lbl:"Validées", val: count("Validé"), cls:"c-teal"},
+    {lbl:"Rejetées", val: count("Rejeté"), cls:"c-red"},
+    {lbl:"Taux d'intégration GMAO", val: taux+"%", cls:"c-teal"},
+  ];
+  document.getElementById("kpiStrip").innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.cls}"><div class="val">${k.val}</div><div class="lbl">${k.lbl}</div></div>
+  `).join("");
+}
+
+function renderStatusDonut(){
+  const all = STATE.requests;
+  const total = all.length;
+  const svg = document.getElementById("statusDonut");
+  const legend = document.getElementById("statusLegend");
+  if(total===0){
+    svg.innerHTML = `<circle cx="70" cy="70" r="54" fill="none" stroke="var(--border-soft)" stroke-width="16"/>`;
+    legend.innerHTML = `<div class="legend-item">Aucune donnée importée</div>`;
+    return;
+  }
+  const r = 54, c = 2*Math.PI*r;
+  let acc = 0, segs = "";
+  legend.innerHTML = "";
+  STATUTS.forEach(s=>{
+    const n = all.filter(r2=>r2.statut===s).length;
+    if(n===0) return;
+    const frac = n/total;
+    const len = frac*c;
+    segs += `<circle cx="70" cy="70" r="${r}" fill="none" stroke="${STATUS_COLOR[s]}" stroke-width="16"
+      stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-acc}" transform="rotate(-90 70 70)"/>`;
+    acc += len;
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-dot" style="background:${STATUS_COLOR[s]}"></span>${s}<b>${n}</b>`;
+    legend.appendChild(item);
+  });
+  svg.innerHTML = segs;
+}
+
+function renderTypeBars(){
+  const all = STATE.requests;
+  const total = all.length;
+  const wrap = document.getElementById("typeBars");
+  wrap.innerHTML = TYPES_DOC.map(t=>{
+    const n = all.filter(r=>r.type_doc===t).length;
+    const pct = total ? Math.round((n/total)*100) : 0;
+    return `<div class="bar-meter">
+      <div class="bar-meter-head"><span>${t}</span><b>${n}</b></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
+}
+
+function renderSystemBars(){
+  const all = STATE.requests;
+  const total = all.length;
+  const wrap = document.getElementById("systemBars");
+  wrap.innerHTML = SYSTEMES.map(s=>{
+    const n = all.filter(r=>r.systeme===s).length;
+    const pct = total ? Math.round((n/total)*100) : 0;
+    return `<div class="bar-meter">
+      <div class="bar-meter-head"><span>${s} <span class="cell-muted" style="font-size:10.5px;">— ${ENGINEER_MAP[s]}</span></span><b>${n}</b></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--teal);"></div></div>
+    </div>`;
+  }).join("");
+}
+
+function renderFilterOptions(){
+  const fill = (id, values) => {
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.querySelectorAll("option:not(:first-child)").forEach(o=>o.remove());
+    values.forEach(v=>{
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    });
+    sel.value = current;
+  };
+  fill("fUnite", UNITES);
+  fill("fType", TYPES_DOC);
+  fill("fSysteme", SYSTEMES);
+  fill("fIngenieur", INGENIEURS);
+  fill("fNature", NATURES);
+  fill("fStatut", STATUTS);
+}
+function syncFilterInputs(){
+  document.getElementById("fUnite").value = FILTERS.unite;
+  document.getElementById("fType").value = FILTERS.type_doc;
+  document.getElementById("fSysteme").value = FILTERS.systeme;
+  document.getElementById("fIngenieur").value = FILTERS.ingenieur;
+  document.getElementById("fNature").value = FILTERS.nature;
+  document.getElementById("fStatut").value = FILTERS.statut;
+  document.getElementById("fSearch").value = FILTERS.search;
+}
+function resetFilters(){
+  FILTERS = {unite:"",type_doc:"",systeme:"",ingenieur:"",nature:"",statut:"",search:""};
+  syncFilterInputs(); renderAll();
+}
+
+function esc(v){
+  return (v===undefined||v===null) ? "" : String(v).replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function renderTable(){
+  const rows = getFiltered();
+  document.getElementById("resultCount").textContent = `${rows.length} demande(s)`;
+  const body = document.getElementById("tableBody");
+  if(rows.length===0){
+    body.innerHTML = `<tr><td colspan="20"><div class="empty-state">Aucune demande à afficher — importez les fichiers des unités ou ajustez les filtres.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map(r=>{
+    const realIdx = STATE.requests.indexOf(r);
+    const link = r.lien_document ? `<a href="${esc(r.lien_document)}" target="_blank" rel="noopener" style="color:var(--blue);">Ouvrir ↗</a>` : "";
+    return `<tr>
+      <td class="cell-muted">${esc(r.id_demande)}</td>
+      <td><b>${esc(r.unite)}</b></td>
+      <td class="cell-muted">${esc(r.date_demande)}</td>
+      <td>${esc(r.demandeur)}</td>
+      <td>${esc(r.type_doc)}</td>
+      <td>${esc(r.systeme)}</td>
+      <td class="cell-muted">${esc(r.ingenieur)}</td>
+      <td>${link}</td>
+      <td>${esc(r.reference)}</td>
+      <td>${esc(r.designation)}</td>
+      <td>${esc(r.nature)}</td>
+      <td class="cell-muted">${esc(r.periodicite_actuelle)}</td>
+      <td class="cell-muted">${esc(r.periodicite_proposee)}</td>
+      <td class="cell-muted">${esc(r.existant)}</td>
+      <td>${esc(r.modification_proposee)}</td>
+      <td class="cell-muted">${esc(r.motif)}</td>
+      <td class="cell-muted">${esc(r.justification)}</td>
+      <td>
+        <select class="edit-status" onchange="updateField(${realIdx},'statut',this.value)">
+          ${STATUTS.map(s=>`<option value="${s}" ${r.statut===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+      <td><input type="date" class="edit-date" value="${esc(r.date_traitement)}" onchange="updateField(${realIdx},'date_traitement',this.value)"></td>
+      <td><textarea class="edit-obs" rows="1" onchange="updateField(${realIdx},'observations',this.value)">${esc(r.observations)}</textarea></td>
+    </tr>`;
+  }).join("");
+}
+
+function updateField(idx, field, value){
+  if(idx<0 || !STATE.requests[idx]) return;
+  STATE.requests[idx][field] = value;
+  persist();
+  renderLamps(); renderKpis(); renderStatusDonut(); renderTypeBars();
+}
+
+function renderAll(){
+  renderLamps();
+  renderKpis();
+  renderStatusDonut();
+  renderTypeBars();
+  renderSystemBars();
+  renderFilterOptions();
+  renderTable();
+  renderFileChips();
+}
+
+function exportConsolidated(){
+  if(STATE.requests.length===0){ alert("Aucune donnée à exporter."); return; }
+  const header = ["N° Demande","Unité","Date de la demande","Demandeur (Nom, Fonction)","Type de document concerné",
+    "Système","Ingénieur en charge","Lien du document","Référence document","Désignation équipement",
+    "Nature de la modification","Périodicité actuelle","Périodicité proposée","Description de l'existant",
+    "Description de la modification proposée","Motif de la modification","Justification",
+    "Statut (réservé DG)","Date de traitement DG","Observations DG"];
+  const keyOrder = ["id_demande","unite","date_demande","demandeur","type_doc","systeme","ingenieur",
+    "lien_document","reference","designation","nature","periodicite_actuelle","periodicite_proposee",
+    "existant","modification_proposee","motif","justification","statut","date_traitement","observations"];
+  const data = [header, ...STATE.requests.map(r => keyOrder.map(k=>r[k]||""))];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Consolidé");
+  const year = document.getElementById("campaignYear").value || "annee";
+  XLSX.writeFile(wb, `Consolide_Modifications_${year}.xlsx`);
+}
+
+function clearAll(){
+  if(!confirm("Supprimer toutes les données importées sur ce poste ? Cette action est irréversible.")) return;
+  STATE = { requests: [], files: [] };
+  persist(); renderAll();
+}
+
+// ---- wiring ----
+document.getElementById("fileInput").addEventListener("change", e => handleFiles(e.target.files));
+const dz = document.getElementById("dropZone");
+["dragenter","dragover"].forEach(ev => dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.add("drag"); }));
+["dragleave","drop"].forEach(ev => dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.remove("drag"); }));
+dz.addEventListener("drop", e => handleFiles(e.dataTransfer.files));
+
+["fUnite","fType","fSysteme","fIngenieur","fNature","fStatut"].forEach(id=>{
+  const map = {fUnite:"unite",fType:"type_doc",fSysteme:"systeme",fIngenieur:"ingenieur",fNature:"nature",fStatut:"statut"};
+  document.getElementById(id).addEventListener("change", e=>{ FILTERS[map[id]] = e.target.value; renderAll(); });
+});
+document.getElementById("fSearch").addEventListener("input", e=>{ FILTERS.search = e.target.value; renderAll(); });
+
+load();
+renderAll();
+</script>
+</body>
+</html>

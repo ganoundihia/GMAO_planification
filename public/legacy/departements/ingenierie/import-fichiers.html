@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centre d'Import — SETRAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg: #f7f9fc;
+  --panel: #ffffff;
+  --panel-2: #f1f5fb;
+  --line: #e2e8f4;
+  --text: #0a1930;
+  --muted: #44537a;
+  --accent: #2f6690;
+  --accent-dim: #e4edf3;
+  --teal: #2f6690;
+  --teal-dark: #24537a;
+  --red: #d6455a;
+  --amber: #f0b429;
+  --green: #1f9d6f;
+  --blue: #2f80c9;
+  --purple: #7c6fe0;
+  --mono: 'Inter', ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  --sans: 'Inter', "Segoe UI", -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    linear-gradient(160deg, rgba(47, 102, 144, 0.06) 0%, rgba(27, 58, 82, 0.04) 50%, transparent 100%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height:100vh;
+  line-height:1.45;
+}
+::selection{ background: var(--accent-dim); }
+.shell{ max-width:1100px; margin:0 auto; padding:0 24px 80px; }
+.site-header{
+  background: linear-gradient(135deg, #0a1930 20%, #2f6690 100%);
+  border-bottom:4px solid var(--accent);
+  margin-bottom:28px;
+}
+.site-header-inner{
+  max-width:1100px; margin:0 auto; padding:18px 24px;
+  display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;
+}
+.brand{ display:flex; align-items:center; gap:14px; }
+.brand-mark{
+  width:42px;height:42px;border-radius:10px;
+  background: var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700; color:#ffffff; font-size:18px;
+  flex:none; box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+.brand h1{ color:#ffffff; font-size:19px; margin:0; letter-spacing:.2px; font-weight:650;}
+.brand p{ color:rgba(255,255,255,.82); margin:2px 0 0; font-size:12.5px; }
+.intro{ font-size:13px; color:var(--muted); margin:0 0 26px; line-height:1.6; }
+.intro b{ color:var(--text); }
+
+.group{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px; margin-bottom:22px; }
+.group h2{ font-size:14px; margin:0 0 4px; font-weight:650; }
+.group .hint{ font-size:12.5px; color:var(--muted); margin:0 0 16px; }
+
+.slot{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+.slot:last-child{ margin-bottom:0; }
+.slot-label{ font-size:12.5px; font-weight:650; color:var(--text); }
+.slot-label .tag{ font-weight:500; color:var(--muted); font-size:11.5px; }
+
+.dropzone{
+  border:1.5px dashed #b7c7ca; border-radius:10px; padding:20px;
+  display:flex; align-items:center; gap:14px; cursor:pointer;
+  transition:border-color .15s, background .15s; background:#f7fafb;
+}
+.dropzone.drag{ border-color: var(--accent); background:var(--accent-dim); }
+.dropzone .dz-icon{ font-size:20px; opacity:.75; flex:none; }
+.dropzone .dz-txt{ font-size:12.5px; }
+.dropzone .dz-title{ font-weight:600; }
+.dropzone .dz-sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+input[type=file]{ display:none; }
+
+.filelist{ display:flex; flex-direction:column; gap:6px; }
+.file-row{
+  display:flex; align-items:center; gap:10px; background:var(--panel-2);
+  border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:12px;
+}
+.file-row .fname{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.file-row .fsize{ color:var(--muted); font-size:11px; }
+.file-row .rm{ cursor:pointer; color:var(--muted); font-size:15px; padding:0 4px; }
+.file-row .rm:hover{ color:var(--red); }
+.empty-hint{ font-size:11.5px; color:var(--muted); font-style:italic; }
+
+.status-line{ display:flex; align-items:center; gap:8px; font-size:11.5px; margin-top:2px; }
+.status-line .dot{ width:7px; height:7px; border-radius:50%; background:#c7d0da; flex:none; }
+.status-line.ok .dot{ background:var(--green); }
+.status-line.ok{ color:var(--green); }
+.status-line.empty{ color:var(--muted); }
+
+.btn{ border:none; border-radius:8px; padding:9px 16px; font-size:12.5px; font-weight:650; cursor:pointer; font-family:var(--sans); }
+.btn-outline{ background:#fff; border:1px solid var(--line)!important; color:var(--text); }
+.btn-outline:hover{ background:var(--panel-2); }
+.btn-clear{ background:transparent; color:var(--red); padding:4px 8px; font-size:11.5px; }
+.btn-clear:hover{ text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <div class="brand-mark">⇪</div>
+      <div>
+        <h1>Centre d'Import</h1>
+        <p>Importez vos fichiers une seule fois — chaque outil les récupère automatiquement</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <p class="intro">Déposez ici les fichiers utilisés par les outils du portail. Ils sont conservés <b>dans votre navigateur</b> (aucun envoi à un serveur) et rechargés automatiquement à l'ouverture de chaque outil — vous n'avez plus besoin de les réimporter à chaque fois. Revenez sur cette page quand vous devez remplacer un fichier par une version plus récente.</p>
+
+  <div class="group">
+    <h2>Maintenance Corrective <span class="tag" style="font-weight:500;">— fichier partagé</span></h2>
+    <p class="hint">Un seul import, utilisé automatiquement par <b>Analyse MBF</b>, <b>Analyse RAM</b> et <b>Suivi des Performances</b>. Déposez un fichier par site/unité (ALG, ORN, SBA, CST, STF, ORG, MGM…) — le nom du fichier doit contenir l'unité pour que les outils qui en ont besoin (Suivi des Performances) puissent l'identifier automatiquement.</p>
+
+    <div class="slot" data-slot="corrective" data-multi="1" data-accept=".xlsx,.xls">
+      <div class="slot-label">Exports GMAO — Corrective <span class="tag">.xlsx, plusieurs fichiers acceptés</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez vos fichiers ici, ou cliquez pour parcourir</div><div class="dz-sub">.xlsx — plusieurs fichiers acceptés, un par site/unité</div></div>
+        <input type="file" multiple accept=".xlsx,.xls">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Maintenance Préventive <span class="tag" style="font-weight:500;">— fichier partagé</span></h2>
+    <p class="hint">Un seul import, utilisé automatiquement par <b>Analyse MBF</b>, <b>Analyse RAM</b> et <b>Suivi des Performances</b>. Mêmes règles que pour la Corrective : un fichier par site/unité, avec le nom de l'unité dans le nom du fichier.</p>
+
+    <div class="slot" data-slot="preventif" data-multi="1" data-accept=".xlsx,.xls">
+      <div class="slot-label">Exports GMAO — Préventif <span class="tag">.xlsx, plusieurs fichiers acceptés</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez vos fichiers ici, ou cliquez pour parcourir</div><div class="dz-sub">.xlsx — plusieurs fichiers acceptés, un par site/unité</div></div>
+        <input type="file" multiple accept=".xlsx,.xls">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Matériel Roulant (MR)</h2>
+    <p class="hint">Fichiers utilisés par l'outil « Suivi des Performances » — page <b>MR — Rames</b>. Chargez les fichiers <b>MR ALG, MR ORN, MR SBA, MR CST, MR STF, MR ORG, MR MGM</b>.</p>
+
+    <div class="slot" data-slot="materiel-roulant" data-multi="1" data-accept=".xlsx,.xls,.csv,.xlsm">
+      <div class="slot-label">Exports GMAO — Matériel Roulant <span class="tag">.xlsx, plusieurs fichiers acceptés</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez vos fichiers ici, ou cliquez pour parcourir</div><div class="dz-sub">.xlsx — plusieurs fichiers acceptés, un par rame/unité</div></div>
+        <input type="file" multiple accept=".xlsx,.xls,.csv,.xlsm">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Efficience RH <span class="tag" style="font-weight:500;">— fichiers dédiés</span></h2>
+    <p class="hint">Fichiers utilisés uniquement par l'outil « Suivi des Performances » — page <b>Efficience RH</b>. Ce sont des exports distincts de la Corrective/Préventif ci-dessus : chargez un fichier par site/unité, avec le code de l'unité (ALG, ORN, SBA, CST, STF, ORG, MGM) dans le nom du fichier.</p>
+
+    <div class="slot" data-slot="rh-corretif" data-multi="1" data-accept=".xlsx,.xls">
+      <div class="slot-label">Efficience RH — Correctif <span class="tag">.xlsx, plusieurs fichiers acceptés</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez vos fichiers ici, ou cliquez pour parcourir</div><div class="dz-sub">.xlsx — un fichier par site/unité</div></div>
+        <input type="file" multiple accept=".xlsx,.xls">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+
+    <div class="slot" data-slot="rh-preventif" data-multi="1" data-accept=".xlsx,.xls">
+      <div class="slot-label">Efficience RH — Préventif <span class="tag">.xlsx, plusieurs fichiers acceptés</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez vos fichiers ici, ou cliquez pour parcourir</div><div class="dz-sub">.xlsx — un fichier par site/unité</div></div>
+        <input type="file" multiple accept=".xlsx,.xls">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Analyse RAM — document complémentaire</h2>
+    <p class="hint">Fichier utilisé uniquement par l'outil « Analyse RAM · Audit Maintenance GMAO ».</p>
+
+    <div class="slot" data-slot="ram-audit" data-multi="0" data-accept=".docx">
+      <div class="slot-label">Document d'Audit RAM <span class="tag">.docx</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez le fichier ici, ou cliquez pour parcourir</div><div class="dz-sub">.docx — un seul fichier</div></div>
+        <input type="file" accept=".docx">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Analyse Rapport Journalier</h2>
+    <p class="hint">Fichier utilisé par l'outil « Analyseur RJE · Service Maintenance ».</p>
+
+    <div class="slot" data-slot="rje-pdf" data-multi="0" data-accept="application/pdf">
+      <div class="slot-label">Rapport Journalier <span class="tag">.pdf</span></div>
+      <div class="dropzone">
+        <div class="dz-icon">⇪</div>
+        <div class="dz-txt"><div class="dz-title">Glissez le fichier ici, ou cliquez pour parcourir</div><div class="dz-sub">.pdf — un seul fichier</div></div>
+        <input type="file" accept="application/pdf">
+      </div>
+      <div class="filelist"></div>
+      <div class="status-line"><span class="dot"></span><span class="txt"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   STOCKAGE PARTAGÉ (IndexedDB) — même origine que tous les
+   outils du portail, donc accessible depuis chaque page.
+   ========================================================= */
+const IMPORT_DB_NAME = "setram-import-hub";
+const IMPORT_STORE = "slots";
+function importDbOpen(){
+  return new Promise((res, rej)=>{
+    const req = indexedDB.open(IMPORT_DB_NAME, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(IMPORT_STORE);
+    req.onsuccess = ()=> res(req.result);
+    req.onerror = ()=> rej(req.error);
+  });
+}
+async function importSlotSet(slotId, files){
+  const packed = await Promise.all(Array.from(files).map(async f=>({
+    name:f.name, type:f.type, lastModified:f.lastModified, size:f.size, data: await f.arrayBuffer()
+  })));
+  const db = await importDbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(IMPORT_STORE, "readwrite");
+    tx.objectStore(IMPORT_STORE).put({slotId, files:packed, savedAt:new Date().toISOString()}, slotId);
+    tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function importSlotGet(slotId){
+  const db = await importDbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(IMPORT_STORE, "readonly");
+    const r = tx.objectStore(IMPORT_STORE).get(slotId);
+    r.onsuccess = ()=>res(r.result || null); r.onerror = ()=>rej(r.error);
+  });
+}
+async function importSlotClear(slotId){
+  const db = await importDbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(IMPORT_STORE, "readwrite");
+    tx.objectStore(IMPORT_STORE).delete(slotId);
+    tx.oncomplete = ()=>res(); tx.onerror = ()=>rej(tx.error);
+  });
+}
+function fmtSize(n){
+  if (n < 1024) return n + " o";
+  if (n < 1024*1024) return (n/1024).toFixed(1) + " Ko";
+  return (n/1024/1024).toFixed(1) + " Mo";
+}
+
+/* =========================================================
+   UI PAR SLOT
+   ========================================================= */
+document.querySelectorAll(".slot").forEach(slotEl=>{
+  const slotId = slotEl.dataset.slot;
+  const multi = slotEl.dataset.multi === "1";
+  const dropzone = slotEl.querySelector(".dropzone");
+  const input = slotEl.querySelector("input[type=file]");
+  const filelistEl = slotEl.querySelector(".filelist");
+  const statusEl = slotEl.querySelector(".status-line");
+
+  async function refresh(){
+    const packed = await importSlotGet(slotId);
+    filelistEl.innerHTML = "";
+    if (!packed || !packed.files || !packed.files.length){
+      statusEl.className = "status-line empty";
+      statusEl.querySelector(".txt").textContent = "Aucun fichier importé pour l'instant.";
+      return;
+    }
+    statusEl.className = "status-line ok";
+    const when = new Date(packed.savedAt).toLocaleString("fr-FR");
+    statusEl.querySelector(".txt").textContent = `${packed.files.length} fichier(s) importé(s) · ${when}`;
+    packed.files.forEach((f, i)=>{
+      const row = document.createElement("div");
+      row.className = "file-row";
+      row.innerHTML = `<span class="fname">${f.name}</span><span class="fsize">${fmtSize(f.size)}</span><span class="rm" title="Retirer ce fichier" data-i="${i}">✕</span>`;
+      filelistEl.appendChild(row);
+    });
+    filelistEl.querySelectorAll(".rm").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const packed2 = await importSlotGet(slotId);
+        packed2.files.splice(parseInt(btn.dataset.i,10), 1);
+        if (packed2.files.length){
+          const db = await importDbOpen();
+          const tx = db.transaction(IMPORT_STORE, "readwrite");
+          tx.objectStore(IMPORT_STORE).put(packed2, slotId);
+          tx.oncomplete = refresh;
+        } else {
+          await importSlotClear(slotId);
+          refresh();
+        }
+      });
+    });
+  }
+
+  async function handleFiles(fileList){
+    const incoming = Array.from(fileList);
+    if (!incoming.length) return;
+    if (multi){
+      const existing = await importSlotGet(slotId);
+      const prevFiles = existing ? existing.files : [];
+      const packedNew = await Promise.all(incoming.map(async f=>({
+        name:f.name, type:f.type, lastModified:f.lastModified, size:f.size, data: await f.arrayBuffer()
+      })));
+      const db = await importDbOpen();
+      const tx = db.transaction(IMPORT_STORE, "readwrite");
+      tx.objectStore(IMPORT_STORE).put({slotId, files: prevFiles.concat(packedNew), savedAt:new Date().toISOString()}, slotId);
+      tx.oncomplete = refresh;
+    } else {
+      await importSlotSet(slotId, [incoming[0]]);
+      refresh();
+    }
+  }
+
+  dropzone.addEventListener("click", ()=> input.click());
+  dropzone.addEventListener("dragover", e=>{ e.preventDefault(); dropzone.classList.add("drag"); });
+  dropzone.addEventListener("dragleave", ()=> dropzone.classList.remove("drag"));
+  dropzone.addEventListener("drop", e=>{
+    e.preventDefault(); dropzone.classList.remove("drag");
+    handleFiles(e.dataTransfer.files);
+  });
+  input.addEventListener("change", e=> handleFiles(e.target.files));
+
+  refresh();
+});
+</script>
+</body>
+</html>

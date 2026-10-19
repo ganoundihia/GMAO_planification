@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETRAM · Audit Maintenance GMAO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#f7f9fc;
+  --bg-panel:#ffffff;
+  --bg-panel-2:#f1f5fb;
+  --line:#e2e8f4;
+  --text:#0a1930;
+  --text-dim:#44537a;
+  --text-dimmer:#7c8bab;
+  --amber:#f0b429;
+  --amber-dim:#fdf1e2;
+  --teal:#2f6690;
+  --teal-dim:#e4edf3;
+  --red:#d6455a;
+  --red-dim:#fbe9ec;
+  --blue:#0a1930;
+  --blue-2:#2f6690;
+  --gold:#f0b429;
+  --font-display:'Inter',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'Inter',sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:14px;
+  line-height:1.5;
+  min-height:100vh;
+}
+::selection{background:var(--gold);color:#fff;}
+
+/* ---------- layout ---------- */
+.app{max-width:1360px;margin:0 auto;padding:0 24px 80px;}
+header.top{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:20px;
+  padding:26px 0 22px;margin-bottom:6px;border-bottom:2px solid var(--blue);
+  flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:16px;}
+.brand .logo-mark{
+  width:48px;height:48px;border-radius:10px;flex:none;
+  background:linear-gradient(160deg,var(--blue) 0%,var(--blue-2) 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(10,43,76,.28);
+  border:1px solid rgba(255,255,255,.12);
+}
+.brand .logo-mark svg{width:27px;height:27px;}
+.brand .brand-text{display:flex;flex-direction:column;gap:2px;}
+.brand .eyebrow{
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.16em;color:var(--gold);
+  text-transform:uppercase;font-weight:600;
+}
+.brand h1{
+  font-family:var(--font-display);font-weight:700;font-size:25px;letter-spacing:.005em;
+  margin:2px 0 0;color:var(--blue);
+}
+.brand .sub{color:var(--text-dim);font-size:12.5px;margin-top:3px;}
+.top-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.pill{
+  font-family:var(--font-mono);font-size:11.5px;padding:6px 12px;border-radius:20px;
+  border:1px solid var(--line);color:var(--text-dim);background:var(--bg-panel);
+  display:flex;align-items:center;gap:6px;
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);}
+.pill.warn .dot{background:var(--amber);}
+
+/* unit selector */
+.unit-picker{display:flex;align-items:center;gap:8px;}
+.unit-picker label{font-size:11.5px;color:var(--text-dim);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.05em;}
+.unit-picker input, .unit-picker select{
+  background:var(--bg-panel);border:1px solid var(--line);color:var(--text);
+  padding:7px 10px;border-radius:8px;font-family:var(--font-body);font-size:13px;min-width:220px;
+}
+.unit-picker input:focus, .unit-picker select:focus{outline:2px solid var(--blue-2);outline-offset:1px;}
+
+/* layout — sidebar + content, same pattern as the Documents registry page */
+.layout-shell{display:flex;align-items:flex-start;gap:24px;margin-top:20px;}
+.tab-sidebar{
+  flex:none;width:250px;position:sticky;top:20px;
+  background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;
+  padding:10px;max-height:calc(100vh - 40px);overflow-y:auto;
+}
+.main-col{flex:1;min-width:0;}
+@media(max-width:900px){
+  .layout-shell{flex-direction:column;}
+  .tab-sidebar{width:100%;position:static;max-height:none;}
+}
+
+/* nav — vertical list inside the sidebar */
+nav.tabs{display:flex;flex-direction:column;gap:2px;}
+nav.tabs button{
+  font-family:var(--font-display);font-size:13px;letter-spacing:.01em;font-weight:600;
+  background:none;border:none;color:var(--text-dimmer);padding:10px 12px;cursor:pointer;
+  border-radius:9px;text-align:left;white-space:normal;transition:color .15s,background .15s;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+nav.tabs button .count{
+  font-family:var(--font-mono);font-size:11px;background:var(--bg-panel-2);
+  color:var(--text-dim);padding:1px 6px;border-radius:9px;flex:none;
+}
+nav.tabs button:hover{color:var(--blue);background:var(--bg-panel-2);}
+nav.tabs button.active{color:#fff;background:var(--blue);}
+nav.tabs button.active .count{background:rgba(255,255,255,.18);color:#fff;}
+nav.tabs button.pin{color:var(--blue-2);}
+nav.tabs button.active.pin{color:#fff;}
+
+.view{display:none;animation:fade .25s ease;}
+.view.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* cards / kpis */
+.grid-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+@media(max-width:900px){.grid-kpi{grid-template-columns:repeat(2,1fr);}}
+.kpi{
+  background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+  position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(15,40,60,.05);
+}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue-2);}
+.kpi .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;font-weight:600;}
+.kpi .value{font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--blue);margin-top:5px;}
+.kpi .value.amber{color:var(--amber);}
+.kpi .value.red{color:var(--red);}
+.kpi .value.teal{color:var(--teal);}
+.kpi .foot{font-size:11.5px;color:var(--text-dimmer);margin-top:6px;}
+.kpi .bar{height:4px;border-radius:2px;background:var(--bg-panel-2);margin-top:10px;overflow:hidden;}
+.kpi .bar i{display:block;height:100%;background:var(--teal);}
+
+.section-title{
+  font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--blue);
+  margin:28px 0 13px;display:flex;align-items:center;gap:10px;
+  padding-left:12px;border-left:4px solid var(--gold);
+  text-transform:uppercase;letter-spacing:.03em;
+}
+.section-title .tag{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-dim);font-weight:400;
+  border:1px solid var(--line);padding:2px 8px;border-radius:6px;background:var(--bg-panel);
+}
+.panel{background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,40,60,.05);}
+
+/* système bars */
+.sys-bars{display:flex;flex-direction:column;gap:10px;}
+.sys-row{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;}
+.sys-row .name{font-size:13px;color:var(--text);font-weight:500;}
+.sys-row .track{height:10px;background:var(--bg-panel-2);border-radius:5px;overflow:hidden;display:flex;}
+.sys-row .track i{display:block;height:100%;}
+.sys-row .val{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);text-align:right;}
+
+/* filters */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.filters select, .filters input[type=text]{
+  background:var(--bg-panel);border:1px solid var(--line);color:var(--text);
+  padding:8px 10px;border-radius:8px;font-family:var(--font-body);font-size:13px;
+}
+.filters input[type=text]{min-width:220px;}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);cursor:pointer;user-select:none;}
+.chk input{accent-color:var(--amber);}
+.btn{
+  font-family:var(--font-body);font-weight:600;font-size:13px;background:var(--blue);color:#fff;
+  border:none;padding:9px 16px;border-radius:8px;cursor:pointer;transition:filter .15s, transform .1s;
+}
+.btn:hover{filter:brightness(1.1);}
+.btn:active{transform:translateY(1px);}
+.btn.ghost{background:var(--bg-panel);color:var(--blue);border:1px solid var(--line);}
+.btn.small{padding:5px 10px;font-size:12px;}
+
+/* table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
+table.data{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg-panel);}
+table.data th{
+  text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;
+  text-transform:uppercase;color:#fff;padding:10px 12px;border-bottom:1px solid var(--line);
+  background:var(--blue);position:sticky;top:0;white-space:nowrap;
+}
+table.data td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--text);}
+table.data tr:last-child td{border-bottom:none;}
+table.data tr:nth-child(even) td{background:var(--bg-panel-2);}
+table.data tr:hover td{background:var(--teal-dim);}
+.code{font-family:var(--font-mono);font-size:12px;color:var(--blue-2);}
+.badge{
+  display:inline-block;font-size:11px;font-family:var(--font-mono);padding:2px 8px;border-radius:20px;
+  border:1px solid var(--line);white-space:nowrap;
+}
+.badge.ok{color:var(--teal);border-color:var(--teal);background:var(--teal-dim);}
+.badge.warn{color:#b9761f;border-color:var(--amber);background:var(--amber-dim);}
+.badge.bad{color:var(--red);border-color:var(--red);background:var(--red-dim);}
+.badge.muted{color:var(--text-dimmer);}
+.muted{color:var(--text-dimmer);}
+.small{font-size:12px;}
+.comment-cell{max-width:280px;}
+textarea.reform{
+  width:100%;min-height:46px;background:var(--bg-panel-2);border:1px solid var(--line);
+  color:var(--text);border-radius:6px;padding:6px 8px;font-family:var(--font-body);font-size:12.5px;resize:vertical;
+}
+.empty-state{padding:40px 20px;text-align:center;color:var(--text-dimmer);}
+.empty-state b{color:var(--text-dim);display:block;margin-bottom:6px;font-size:15px;}
+
+/* import */
+.import-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:900px){.import-grid{grid-template-columns:1fr;}}
+
+.import-card{
+  background:var(--bg-panel);border:1px solid var(--line);border-radius:14px;
+  padding:16px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 1px 3px rgba(10,43,76,.05);
+}
+.import-card-head{display:flex;align-items:center;gap:9px;}
+.import-icon{
+  flex:none;width:30px;height:30px;border-radius:8px;
+  background:var(--bg-panel-2);color:var(--blue-2);
+  display:flex;align-items:center;justify-content:center;
+}
+.import-icon svg{width:16px;height:16px;}
+.import-card-head h4{
+  font-family:var(--font-display);font-size:14.5px;margin:0;color:var(--blue);
+  font-weight:600;flex:1;
+}
+.import-ext{
+  font-family:var(--font-mono);font-size:10.5px;color:var(--text-dimmer);
+  background:var(--bg-panel-2);padding:2px 7px;border-radius:6px;letter-spacing:.02em;
+}
+
+.drop{
+  position:relative;display:flex;flex-direction:column;align-items:stretch;gap:0;
+  border:1.5px dashed var(--line);border-radius:11px;padding:22px 14px;text-align:center;
+  background:var(--bg-panel);cursor:pointer;transition:border-color .15s,background .15s;
+}
+.drop:hover{border-color:var(--blue-2);background:var(--teal-dim);}
+.drop.has-file{border-color:var(--teal);border-style:solid;background:var(--teal-dim);}
+.drop input{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;
+}
+.drop-body{display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+.drop-icon{
+  width:34px;height:34px;border-radius:50%;background:var(--bg-panel-2);color:var(--text-dimmer);
+  display:flex;align-items:center;justify-content:center;flex:none;
+}
+.drop.has-file .drop-icon{background:var(--teal);color:#fff;}
+.drop-icon svg{width:16px;height:16px;}
+.drop-text{font-size:12.5px;color:var(--text-dim);line-height:1.5;}
+.drop-text code{
+  font-family:var(--font-mono);font-size:11px;color:var(--text-dimmer);
+  background:none;
+}
+.file-chip{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:var(--font-mono);font-size:11.5px;color:var(--teal);font-weight:600;
+  margin-top:10px;word-break:break-all;
+}
+.file-chip:empty{display:none;}
+.file-chip svg{width:13px;height:13px;flex:none;stroke:var(--teal);}
+.import-grid .hint{font-size:12px;color:var(--text-dimmer);margin-top:0;}
+
+footer.note{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--text-dimmer);font-size:12px;}
+a{color:var(--blue-2);}
+
+.split{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;}
+@media(max-width:1000px){.split{grid-template-columns:1fr;}}
+
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;}
+
+/* ===== Ambient background — shared across the whole site (source: Suivi des Performances) ===== */
+.bg-balls{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ball{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform;}
+.ball-1{width:400px;height:400px;background:radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);top:-120px;left:100px;animation:blob-drift-1 28s ease-in-out infinite;}
+.ball-2{width:320px;height:320px;background:radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);top:20%;right:-80px;animation:blob-drift-2 34s ease-in-out infinite;}
+.ball-3{width:300px;height:300px;background:radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);bottom:10%;left:8%;animation:blob-drift-3 38s ease-in-out infinite;}
+.ball-4{width:280px;height:280px;background:radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);top:52%;right:25%;animation:blob-drift-4 30s ease-in-out infinite;}
+@keyframes blob-drift-1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}25%{transform:translate(60px,80px) scale(1.08) rotate(3deg);}50%{transform:translate(-30px,120px) scale(.96) rotate(-2deg);}75%{transform:translate(80px,40px) scale(1.05) rotate(1deg);}}
+@keyframes blob-drift-2{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(-80px,60px) scale(1.1);}66%{transform:translate(-50px,100px) scale(.93);}}
+@keyframes blob-drift-3{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}40%{transform:translate(70px,-60px) scale(1.07) rotate(-4deg);}80%{transform:translate(110px,-90px) scale(.94) rotate(2deg);}}
+@keyframes blob-drift-4{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,50px) scale(1.12);}}
+@media (prefers-reduced-motion: reduce){.ball{animation:none !important;}}
+/* .bg-balls is position:fixed with z-index:0, which by CSS stacking rules
+   can render ABOVE plain unpositioned content — this forces every other
+   direct child of body to stack above it regardless of the page's own
+   wrapper class names. */
+body > *:not(.bg-balls){position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<div class="bg-balls" aria-hidden="true"><div class="ball ball-1"></div><div class="ball ball-2"></div><div class="ball ball-3"></div><div class="ball ball-4"></div></div>
+
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="brand-text">
+        <span class="eyebrow">Ingénierie · Audit GMAO</span>
+        <h1>Audit Maintenance GMAO <span id="brandUnit"></span></h1>
+        <span class="sub" id="sourceLabel">Chargement des données…</span>
+      </div>
+    </div>
+    <div class="top-meta">
+      <div class="unit-picker">
+        <label for="unit-select">Unité opérationnelle</label>
+        <select id="unit-select">
+          <option value="">Toutes les unités</option>
+          <option value="ALG">Alger (ALG)</option>
+          <option value="ORN">Oran (ORN)</option>
+          <option value="SBA">Sidi Bel Abbès (SBA)</option>
+          <option value="CST">Constantine (CST)</option>
+          <option value="STF">Sétif (STF)</option>
+          <option value="ORG">Ouargla (ORG)</option>
+          <option value="MGM">Mostaganem (MGM)</option>
+        </select>
+      </div>
+      <span class="pill" id="pillMonth"><span class="dot"></span>—</span>
+      <span class="pill warn" id="pillPieces"><span class="dot"></span>—</span>
+      <span class="pill warn" id="pillReform"><span class="dot"></span>—</span>
+    </div>
+  </header>
+
+  <div class="layout-shell">
+    <aside class="tab-sidebar">
+      <nav class="tabs">
+        <button data-tab="import" class="active pin">1. Import / Export</button>
+        <button data-tab="overview" class="pin">Vue d'ensemble</button>
+        <button data-tab="ramaudit">2. Analyse du rapport RAM <span class="count" id="cRamAudit">0</span></button>
+        <button data-tab="taux">3. Taux TMP / TMC <span class="count" id="cTaux">0</span></button>
+        <button data-tab="ram">4. Comparaison RAM ↔ GMAO <span class="count" id="cRam">0</span></button>
+        <button data-tab="reformuler">5. Motifs à reformuler <span class="count" id="cReform">0</span></button>
+        <button data-tab="preventifs">6. Préventifs <span class="count" id="cPreventifs">0</span></button>
+        <button data-tab="correctifs">7. Correctifs <span class="count" id="cCorrectifs">0</span></button>
+        <button data-tab="mr">8. Matériel Roulant <span class="count" id="cMr">0</span></button>
+        <button data-tab="pieces">9. Pièces &amp; DA <span class="count" id="cPieces">0</span></button>
+        <button data-tab="synthese">10. Rapport de synthèse <span class="count" id="cSynthese"></span></button>
+      </nav>
+    </aside>
+    <div class="main-col">
+
+  <!-- ===================== IMPORT ===================== -->
+  <section class="view active" id="view-import">
+    <div class="section-title">Étape 1 — Import des données du mois</div>
+    <p class="muted small" style="margin-top:-8px;">Les exports GMAO se chargent automatiquement depuis le Centre d'Import, un seul endroit pour tout le portail. Par défaut, l'outil affiche les données de Juin 2026 fournies.</p>
+    <!-- Manual per-page dropzones hidden — see Centre d'Import. The drop
+         labels/inputs stay in the DOM (just display:none) because
+         setupDrop()/setupDropMulti() below call getElementById on them
+         directly with no null-check, and autoLoadImportSlot() dispatches
+         'change' events on the inputs to auto-populate from the shared hub. -->
+    <div class="panel" style="display:flex; align-items:center; gap:14px; padding:18px 22px;">
+      <span style="font-size:20px;">⇪</span>
+      <div style="flex:1;">
+        <div style="font-weight:650; font-size:13.5px;">Importer les exports Correctifs / Préventifs / Rapport RAM</div>
+        <div class="muted small" style="margin-top:2px;">Ces trois fichiers s'importent depuis le Centre d'Import et se rechargent automatiquement ici.</div>
+      </div>
+      <a class="btn" href="/ingenierie/import" target="_top" style="text-decoration:none;">Aller au Centre d'Import →</a>
+    </div>
+    <div style="display:none;">
+      <label class="drop" id="drop-corretifs">
+        <input type="file" id="file-corretifs" accept=".xlsx,.xls" multiple>
+        <div class="drop-body"><span class="drop-text">Correctifs</span></div>
+        <div class="file-chip" id="fn-corretifs"></div>
+      </label>
+      <label class="drop" id="drop-preventifs">
+        <input type="file" id="file-preventifs" accept=".xlsx,.xls" multiple>
+        <div class="drop-body"><span class="drop-text">Préventifs</span></div>
+        <div class="file-chip" id="fn-preventifs"></div>
+      </label>
+      <label class="drop" id="drop-ram">
+        <input type="file" id="file-ram" accept=".docx">
+        <div class="drop-body"><span class="drop-text">Rapport RAM</span></div>
+        <div class="file-chip" id="fn-ram"></div>
+      </label>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px;">
+      <button class="btn" id="btn-reset-default">Revenir aux données par défaut (Juin 2026)</button>
+    </div>
+
+    <div class="section-title">Export global</div>
+    <div class="panel">
+      <p class="small muted" style="margin:0 0 12px;">Génère un fichier CSV unique consolidant : pièces/consommables à commander, motifs reformulés, écarts de cohérence RAM.</p>
+      <button class="btn" id="btn-export-all">Télécharger l'export consolidé (CSV)</button>
+    </div>
+  </section>
+  <!-- ===================== OVERVIEW ===================== -->
+  <section class="view" id="view-overview">
+    <div class="grid-kpi" id="kpiGrid"></div>
+
+    <div class="split">
+      <div class="panel">
+        <div class="section-title">Réalisation par système <span class="tag">Correctifs + Préventifs</span></div>
+        <div class="sys-bars" id="sysBars"></div>
+      </div>
+      <div class="panel">
+        <div class="section-title">Points d'attention</div>
+        <div id="attentionList" class="sys-bars"></div>
+      </div>
+    </div>
+  </section>
+  <!-- ===================== ANALYSE RAM (rapport, mot par mot) ===================== -->
+  <section class="view" id="view-ramaudit">
+    <div class="section-title">Étape 2 — Audit du rapport RAM (chapitre Maintenance)</div>
+    <p class="muted small" style="margin-top:-8px;">Lecture détaillée des tableaux de synthèse du rapport RAM : BT préventifs non clôturés, DI correctives non clôturées, DI annulées. Trois anomalies sont recherchées automatiquement, ligne par ligne :</p>
+    <ul class="small muted" style="margin-top:-4px;line-height:1.8;">
+      <li><span class="badge bad">Motif HS non justifié</span> — le motif ou l'intitulé se limite à « HS » / « Hors service » sans préciser la cause réelle ou la pièce en cause.</li>
+      <li><span class="badge warn">Justificatif à détailler (type / réf.)</span> — le motif est présent mais reste trop générique (ex. « manque graisse » seul, sans type ni référence). Le justificatif affiché ci-dessous est reconstruit à partir du motif RAM et de la tâche concernée, mais doit être complété par l'ingénieur système avec le type/la référence exacte de la pièce ou du consommable.</li>
+      <li><span class="badge warn">Échéance imprécise</span> — aucune échéance de clôture n'est fixée, ou seul un semestre vague type « S2-2026 » est indiqué (pas de date engageante).</li>
+      <li><span class="badge bad">Action non recevable</span> — l'action engagée est vide, « / », ou ne correspond à aucune démarche de maintenance identifiable (DA, diagnostic, réparation, vérification…).</li>
+    </ul>
+
+    <div class="grid-kpi" id="ramAuditKpi"></div>
+
+    <div class="filters">
+      <select id="ra-sys"><option value="">Tous systèmes</option></select>
+      <select id="ra-flag">
+        <option value="">Toutes anomalies</option>
+        <option value="motif_hs">Motif HS non justifié</option>
+        <option value="justif_incomplete">Justificatif à détailler (type/réf.)</option>
+        <option value="echeance_vague">Échéance imprécise</option>
+        <option value="action_faible">Action non recevable</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="ra-onlyflag" checked> Anomalies uniquement</label>
+      <button class="btn ghost small" id="ra-export">Exporter CSV</button>
+    </div>
+
+    <div class="section-title" style="font-size:16px;">BT préventifs non clôturés (rapport RAM)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-ra-bt"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">DI correctives non clôturées (rapport RAM)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-ra-di"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">DI annulées durant le mois (rapport RAM)</div>
+    <p class="muted small" style="margin-top:-8px;">Motif d'annulation vide ou trop sommaire pour être recevable.</p>
+    <div class="tbl-wrap"><table class="data" id="tbl-ra-annul"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== TAUX TMP / TMC ===================== -->
+  <section class="view" id="view-taux">
+    <div class="section-title">Étape 3 — Taux de maintenance recalculés depuis la GMAO, comparés au RAM</div>
+    <p class="muted small" style="margin-top:-8px;">
+      Formules appliquées : <b>TMP</b> = (BT Clos + Fait) / Total BT préventifs. <b>TMC</b> = (DI Traîtée + Réalisé) / Total DI correctives — seul le type de travaux « Corrective » est retenu, les « Travaux divers » sont exclus du calcul.
+    </p>
+
+    <div class="grid-kpi" id="tauxKpiGlobal"></div>
+
+    <div class="section-title" style="font-size:16px;">Cohérence interne du rapport RAM (graphique vs tableau « Comparaison inter-indicateurs »)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-taux-coherence"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">TMP par système — Tableau RAM (§4.1.1.1) vs Graphique RAM (mois courant)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-tmp-sys-ram"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">TMC par système — Tableau RAM (§4.1.1.1) vs Graphique RAM (mois courant)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-tmc-sys-ram"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">TMP par système — GMAO recalculé vs RAM (graphique, mois courant)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-tmp-sys"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">TMC par système — GMAO recalculé vs RAM (graphique, mois courant)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-tmc-sys"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== RAM ===================== -->
+  <section class="view" id="view-ram">
+    <div class="section-title">Étape 4 — Cohérence Export GMAO ↔ Rapport RAM</div>
+    <p class="muted small" style="margin-top:-8px;">Comparaison entre les BT/DI non clôturés issus des exports GMAO et ceux documentés dans le rapport d'activité mensuel (RAM). Un rapport RAM doit être importé (onglet Import) pour une comparaison réelle — sans import, la comparaison utilise le RAM-06_2026 par défaut.</p>
+    <div class="split">
+      <div class="panel">
+        <div class="section-title" style="margin-top:0;font-size:16px;">Non clôturés dans GMAO mais absents du RAM</div>
+        <div class="tbl-wrap"><table class="data" id="tbl-ram-missing"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="section-title" style="margin-top:0;font-size:16px;">Documentés dans le RAM mais introuvables dans l'export GMAO</div>
+        <div class="tbl-wrap"><table class="data" id="tbl-ram-orphan"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+    <div class="section-title">Rapprochés (motif RAM disponible)</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-ram-matched"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== REFORMULER ===================== -->
+  <section class="view" id="view-reformuler">
+    <div class="section-title">Étape 5 — Motifs de panne à préciser</div>
+    <p class="muted small" style="margin-top:-8px;">BT/DI dont le commentaire GMAO ne donne pas un motif exploitable (ex. « HS », reprise du titre, motif vide). Saisir ici le motif reformulé — il sera inclus dans l'export.</p>
+    <div class="filters">
+      <select id="rf-sys"><option value="">Tous systèmes</option></select>
+      <button class="btn ghost small" id="rf-export">Exporter CSV</button>
+      <button class="btn ghost small" id="rf-clear">Effacer mes saisies</button>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tbl-reformuler"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== PREVENTIFS ===================== -->
+  <section class="view" id="view-preventifs">
+    <div class="section-title">Étape 6 — Analyse des BT préventifs</div>
+    <div class="filters">
+      <select id="pf-sys"><option value="">Tous systèmes</option></select>
+      <select id="pf-etat"><option value="">Tous états</option></select>
+      <input type="text" id="pf-search" placeholder="Rechercher (code, équipement, commentaire)…">
+      <label class="chk"><input type="checkbox" id="pf-nonclos"> Non clôturés uniquement</label>
+      <label class="chk"><input type="checkbox" id="pf-manque"> Manque pièce/consommable</label>
+      <button class="btn ghost small" id="pf-export">Exporter CSV</button>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tbl-preventifs"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== CORRECTIFS ===================== -->
+  <section class="view" id="view-correctifs">
+    <div class="section-title">Étape 7 — Analyse des DI / BT correctifs</div>
+    <div class="filters">
+      <select id="cf-sys"><option value="">Tous systèmes</option></select>
+      <select id="cf-etat"><option value="">Tous états</option></select>
+      <input type="text" id="cf-search" placeholder="Rechercher (code, équipement, commentaire)…">
+      <label class="chk"><input type="checkbox" id="cf-nonclos"> Non clôturés uniquement</label>
+      <label class="chk"><input type="checkbox" id="cf-manque"> Manque pièce/consommable</label>
+      <button class="btn ghost small" id="cf-export">Exporter CSV</button>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tbl-correctifs"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== MATERIEL ROULANT ===================== -->
+  <section class="view" id="view-mr">
+    <div class="section-title">Étape 8 — Volet Maintenance du Matériel Roulant (rapport RAM)</div>
+    <p class="muted small" style="margin-top:-8px;">Ce volet n'est pas couvert par les exports Correctifs/Préventifs (dédiés aux systèmes fixes) : l'analyse porte donc uniquement sur le contenu du rapport RAM.</p>
+
+    <div class="grid-kpi" id="mrKpi"></div>
+
+    <div class="section-title" style="font-size:16px;">Top 3 pannes récurrentes du mois</div>
+    <div class="tbl-wrap"><table class="data" id="tbl-mr-pannes"><thead></thead><tbody></tbody></table></div>
+
+    <div class="section-title" style="font-size:16px;">Rames immobilisées — anomalies détectées</div>
+    <ul class="small muted" style="margin-top:-4px;line-height:1.8;">
+      <li><span class="badge bad">Action hors périmètre maintenance</span> — le suivi est confié à une entité non-maintenance (ex. « service commercial ») sans action technique.</li>
+      <li><span class="badge warn">DA non tracée</span> — aucune référence de DA/BC alors que l'immobilisation est longue ou liée à une pièce manquante.</li>
+      <li><span class="badge warn">Date de remise en état non estimée</span> — aucune date estimative fournie (vide ou « NC »).</li>
+    </ul>
+    <div class="tbl-wrap"><table class="data" id="tbl-mr-immob"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== PIECES ===================== -->
+  <section class="view" id="view-pieces">
+    <div class="section-title">Étape 9 — Pièces de rechange &amp; consommables à consolider</div>
+    <p class="muted small" style="margin-top:-8px;">Regroupement des BT/DI en <span class="code">Attente Pièce</span> ou dont le commentaire signale un manque, avec rapprochement des DA déjà lancées d'après le rapport RAM.</p>
+    <div class="filters">
+      <select id="pc-sys"><option value="">Tous systèmes</option></select>
+      <select id="pc-da"><option value="">Tous statuts DA</option><option value="da_ok">DA déjà lancée</option><option value="da_missing">DA à lancer</option></select>
+      <button class="btn ghost small" id="pc-export">Exporter CSV (liste DA à lancer)</button>
+    </div>
+    <div class="tbl-wrap"><table class="data" id="tbl-pieces"><thead></thead><tbody></tbody></table></div>
+  </section>
+  <!-- ===================== SYNTHESE AUTOMATIQUE ===================== -->
+  <section class="view" id="view-synthese">
+    <div class="section-title">Étape 10 — Rapport de synthèse automatique
+      <span class="tag" id="syn-periode">—</span>
+    </div>
+    <p class="muted small" style="margin-top:-8px;">Générée automatiquement à partir des fichiers chargés (onglet « Import / Export ») : comparaison RAM ↔ GMAO, cohérence tableaux TMP/TMC, évolution M(A) vs M(A-1), pannes récurrentes, rames immobilisées, travaux en attente. Un ingénieur système n'a qu'à importer sa RAM et ses exports GMAO préventif/correctif : cette page rédige l'analyse à sa place.</p>
+    <div style="display:flex;gap:10px;margin-bottom:18px;">
+      <button class="btn" id="btn-syn-export">Télécharger la synthèse (Word)</button>
+      <button class="btn ghost" id="btn-syn-print">Imprimer / PDF</button>
+    </div>
+    <div id="synthese-content"></div>
+  </section>
+    </div>
+  </div>
+
+  <footer class="note">
+    Outil d'aide à l'audit — les statuts « manque pièce » et « motif à reformuler » sont déterminés par heuristique (état BT « Attente Pièce » + analyse des commentaires). Vérifier avant clôture. Données stockées uniquement dans votre navigateur (aucun envoi à un serveur).
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   DATA (embedded defaults — replaced at runtime if the user imports files)
+   ========================================================================= */
+const DEFAULT_CORRECTIFS = [];
+const DEFAULT_PREVENTIFS = [];
+const DEFAULT_RAM = {"bt_preventifs_non_clotures": [], "di_correctives_non_cloturees": [], "di_annulees": [], "top_pannes_MR": [], "rames_immobilisees": [], "indicateurs_cles": [], "tmp_par_systeme_table": [], "tmc_par_systeme_table": [], "charts": {}};
+const DEFAULT_LABEL = "";
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let RAW_CORRECTIFS = DEFAULT_CORRECTIFS;
+let RAW_PREVENTIFS = DEFAULT_PREVENTIFS;
+let RAM_TABLES = DEFAULT_RAM;
+let SOURCE_LABEL = DEFAULT_LABEL;
+
+let CORRECTIFS = [];   // normalized + analyzed
+let PREVENTIFS = [];
+let SELECTED_UNIT = ""; // "" = toutes les unités, sinon code ALG/ORN/SBA/CST/STF/ORG/MGM
+let RAM_INDEX = new Map(); // code -> {motif, action, ref_da, table, raw}
+let RAM_CODES_SET = new Set();
+
+const SYS_LABELS = {
+  "Bâtiment & Ouvrage (BO)":"BO", "Courant Faible (CFA)":"CFA", "Courant Fort (CFO)":"CFO",
+  "Electromécanique (ELM)":"ELM", "Voie Ferroviaire (VOI)":"VOI",
+  "Ligne Aérienne de Contact (LAC)":"LAC", "Système Sécurité Incendie (SSI)":"SSI"
+};
+function sysShort(s){ return SYS_LABELS[s] || (s||"").slice(0,4).toUpperCase(); }
+const SYS_COLORS = ["#f0a531","#37b6a6","#5b8def","#e8604a","#b48be0","#7fd4c2","#e0a9d0"];
+function sysColor(s){
+  const keys = Object.keys(SYS_LABELS);
+  let i = keys.indexOf(s);
+  if(i<0){ i = Math.abs(hashCode(s||"")) % SYS_COLORS.length; }
+  return SYS_COLORS[i % SYS_COLORS.length];
+}
+function hashCode(str){ let h=0; for(let i=0;i<str.length;i++){h=(h<<5)-h+str.charCodeAt(i);h|=0;} return h; }
+
+const CLOSED_STATES = new Set(["Clos","Traîtée","Traitée","Réalisé","Fait"]);
+const MISSING_PART_STATE = "Attente Pièce";
+const MISSING_RE = /manque|rupture|indisponib|hors\s*stock|absence\s+d[e']|à\s+command|non\s+disponible\s+localement/i;
+const PART_EXTRACT_RE = /(?:manque(?:nt)?(?:\s+de)?|absence\s+de)\s*(?:pdr|pi[eè]ce(?:s)?\s*(?:de\s*rechange)?|consommable)?\s*:?\s*([a-zà-ÿ0-9'’\-\/\.\s]{3,70})/i;
+const GENERIC_COMMENTS = new Set(["hs","h.s","h.s.","panne","défaut","defaut","ras","na","n/a","-","fait","ok","voir photo","à voir"]);
+
+function isClosed(etat){ return CLOSED_STATES.has((etat||"").trim()); }
+
+function extractPart(text){
+  if(!text) return "";
+  const m = text.match(PART_EXTRACT_RE);
+  if(m && m[1]) return m[1].trim().replace(/[\.\s]+$/,"");
+  return "";
+}
+
+function needsReformulation(titre, commentaire){
+  const t = (titre||"").trim().toLowerCase();
+  const c = (commentaire||"").trim().toLowerCase();
+  if(!c) return true;
+  if(GENERIC_COMMENTS.has(c)) return true;
+  if(c === t) return true;
+  if(c.length < 12) return true;
+  if(isUnjustifiedHS(commentaire)) return true;
+  return false;
+}
+
+const CODE_RE = /((?:BT|DI)-[A-Z]{2,5}-\d{4}-\d+)/;
+
+/* ---- word-by-word audit of the RAM report's maintenance tables ---- */
+const VAGUE_HS_RE = /\b(hs|h\.s\.?|hors\s*service)\b/i;
+const JUSTIFIED_KEYWORDS_RE = /manque|fuite|graisse|silicag|\bgaz\b|carte|batterie|onduleur|compresseur|rideau|serrure|m[ée]canisme|bouton|pression|alimentation|kit\s*[ée]cran|adh[ée]sive|traction|sf\s*6|\bterre\b|humidit[ée]|court[\s-]?circuit|corro|oxyd|bouch|encrass|cass[ée]|fissur|d[ée]grad[ée]|endommag[ée]|d[ée]truit/i;
+function isUnjustifiedHS(text){
+  if(!text) return false;
+  const clean = text.replace(/\(.*?\)/g,' ');
+  return VAGUE_HS_RE.test(clean) && !JUSTIFIED_KEYWORDS_RE.test(clean);
+}
+const VAGUE_ECHEANCE_RE = /^s[12][\s\-]?20\d{2}$/i;
+function isVagueEcheance(text){
+  const t=(text||"").trim();
+  if(!t) return true;
+  return VAGUE_ECHEANCE_RE.test(t);
+}
+const ACTION_OK_RE = /\bda\b|diagnostic|r[ée]par|remplace|adapt|v[ée]rifi|lancement|command|prestation|\bcdc\b|analys/i;
+function isNonRecevableAction(text){
+  const t=(text||"").trim();
+  if(!t || t==="/" || t==="-" || /^n\/?a$/i.test(t)) return true;
+  return !ACTION_OK_RE.test(t);
+}
+
+/* ---- justificatif complet : le motif seul ("manque graisse") n'est pas
+   recevable pour un audit destiné à la Direction Générale. On exige que le
+   motif précise le TYPE/la référence de la pièce ou du consommable en cause,
+   et on rattache toujours le motif à la tâche qu'il empêche de réaliser
+   (ex. « Manque graisse type EP2 — pour réaliser : Graissage réducteur portail P3 »). ---- */
+const GENERIC_JUSTIF_RE = /^\s*(manque|absence|rupture)\s+(de\s+|d['’])?\s*[a-zà-ÿ]+\s*\.?\s*$/i;
+const DETAIL_HINT_RE = /type|r[ée]f[ée]rence|r[ée]f\.?\s*[:\-]?\s*\w|n°|mod[èe]le|marque|dimension|diam[èe]tre|capacit[ée]|:/i;
+function isIncompleteJustif(motif){
+  const t = (motif||"").trim();
+  if(!t) return true;
+  if(GENERIC_JUSTIF_RE.test(t)) return true;
+  const words = t.split(/\s+/).filter(Boolean);
+  if(words.length<=3 && !DETAIL_HINT_RE.test(t)) return true;
+  return false;
+}
+function buildJustificatif(motif, titre){
+  const m = (motif||"").trim();
+  const tt = (titre||"").trim();
+  if(!m) return { text:"", incomplete:true };
+  let text = m.replace(/\.+$/,"");
+  text = text.charAt(0).toUpperCase()+text.slice(1);
+  if(tt) text += ` — pour réaliser : « ${tt} »`;
+  else text += " — tâche à réaliser non précisée dans le RAM";
+  return { text, incomplete: isIncompleteJustif(m) };
+}
+
+function flagBadges(flags){
+  const map = {
+    motif_hs: ["bad","Motif HS non justifié"],
+    echeance_vague: ["warn","Échéance imprécise"],
+    action_faible: ["bad","Action non recevable"],
+    justif_incomplete: ["warn","Justificatif à détailler (type / réf.)"]
+  };
+  return flags.map(f=>{ const [cls,label]=map[f]||["muted",f]; return `<span class="badge ${cls}">${label}</span>`; }).join(" ");
+}
+
+function analyzeRamSynthesisTable(rows){
+  if(!rows || rows.length<2) return [];
+  const header = rows[0];
+  const idxRef = header.findIndex(h=>/r[ée]f\s*(bt|di)/i.test(h));
+  const idxImpact = header.findIndex(h=>/impact/i.test(h));
+  const idxMotif = header.findIndex(h=>/motif/i.test(h));
+  const idxAction = header.findIndex(h=>/action\s*engag/i.test(h));
+  const idxDateLanc = header.findIndex(h=>/date.*lancement/i.test(h));
+  const idxEch = header.findIndex(h=>/[ée]ch[ée]ance/i.test(h));
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const row = rows[i];
+    if(!row || !row.length) continue;
+    if(/nombre\s*total/i.test(row[0]||"")) continue;
+    const refCell = idxRef>=0 ? row[idxRef] : row[1];
+    if(!refCell) continue;
+    const codeMatch = (refCell||"").match(CODE_RE);
+    const code = codeMatch ? codeMatch[1] : "";
+    const titreSuffix = (refCell||"").includes(":") ? refCell.split(":").slice(1).join(":").trim() : "";
+    const motif = idxMotif>=0 ? (row[idxMotif]||"") : "";
+    const action = idxAction>=0 ? (row[idxAction]||"") : "";
+    const echeance = idxEch>=0 ? (row[idxEch]||"") : "";
+    const dateLanc = idxDateLanc>=0 ? (row[idxDateLanc]||"") : "";
+    const impact = idxImpact>=0 ? (row[idxImpact]||"") : "";
+    const titreFinal = titreSuffix||refCell;
+    const justif = buildJustificatif(motif, titreFinal);
+    const flags = [];
+    if(isUnjustifiedHS(motif)) flags.push("motif_hs");
+    if(isVagueEcheance(echeance)) flags.push("echeance_vague");
+    if(isNonRecevableAction(action)) flags.push("action_faible");
+    if(motif && motif.trim() && justif.incomplete) flags.push("justif_incomplete");
+    out.push({sys: row[0], code, titre: titreFinal, impact, motif, action, dateLanc, echeance, flags, justif: justif.text, justifIncomplete: justif.incomplete});
+  }
+  return out;
+}
+
+function analyzeRamAnnulees(rows){
+  if(!rows || rows.length<2) return [];
+  const header = rows[0];
+  const idxRef = header.findIndex(h=>/r[ée]f\s*di/i.test(h));
+  const idxDate = header.findIndex(h=>/date/i.test(h));
+  const idxMotif = header.findIndex(h=>/motif/i.test(h));
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const row = rows[i];
+    if(!row || !row.length) continue;
+    const code = idxRef>=0 ? row[idxRef] : row[1];
+    if(!code || !CODE_RE.test(code)) continue;
+    const motif = idxMotif>=0 ? (row[idxMotif]||"") : "";
+    const date = idxDate>=0 ? (row[idxDate]||"") : "";
+    const vague = !motif.trim() || motif.trim().length<6 || isUnjustifiedHS(motif);
+    out.push({sys: row[0], code, date, motif, vague});
+  }
+  return out;
+}
+
+let RAM_AUDIT_BT = [], RAM_AUDIT_DI = [], RAM_AUDIT_ANNUL = [];
+function runRamAudit(){
+  RAM_AUDIT_BT = analyzeRamSynthesisTable(RAM_TABLES.bt_preventifs_non_clotures);
+  RAM_AUDIT_DI = analyzeRamSynthesisTable(RAM_TABLES.di_correctives_non_cloturees);
+  RAM_AUDIT_ANNUL = analyzeRamAnnulees(RAM_TABLES.di_annulees);
+}
+
+function renderRamAuditTable(tableId, rows, sysVal, flagVal, onlyFlag){
+  let filtered = rows.slice();
+  if(sysVal) filtered = filtered.filter(r=>r.sys===sysVal);
+  if(flagVal) filtered = filtered.filter(r=>r.flags.includes(flagVal));
+  if(onlyFlag) filtered = filtered.filter(r=>r.flags.length>0);
+  const table = document.getElementById(tableId);
+  table.querySelector("thead").innerHTML = `<tr>
+    <th>Système</th><th>Réf</th><th>Titre</th><th>Impact sécurité</th><th>Justificatif détaillé (motif + tâche concernée)</th>
+    <th>Action engagée</th><th>Échéance clôture</th><th>Anomalies détectées</th>
+  </tr>`;
+  const tbody = table.querySelector("tbody");
+  tbody.innerHTML = "";
+  if(!filtered.length){
+    tbody.append(el("tr",{}, el("td",{colspan:"8"}, el("div",{class:"empty-state"}, el("b",{},"Aucune ligne"), "Aucune anomalie ne correspond aux filtres."))));
+    return;
+  }
+  filtered.forEach(r=>{
+    const justifCellHtml = r.justif
+      ? `<div>${escapeHtml(r.justif)}</div>` + (r.justifIncomplete ? `<div style="margin-top:4px;"><span class="badge warn">À détailler : type / réf. de la pièce ou du consommable</span></div>` : "")
+      : `<span class="muted">(vide — aucun motif renseigné dans le RAM)</span>`;
+    tbody.append(el("tr",{},
+      el("td",{}, r.sys),
+      el("td",{}, r.code? el("span",{class:"code"}, r.code) : el("span",{class:"muted small"},"—")),
+      el("td",{class:"comment-cell small"}, r.titre||"—"),
+      el("td",{}, r.impact==="OUI" ? `<span class="badge bad">OUI</span>` : (r.impact||"—")),
+      el("td",{class:"comment-cell small", html: justifCellHtml, style:"max-width:320px;"}),
+      el("td",{class:"comment-cell small"}, r.action||el("span",{class:"muted"},"(vide)")),
+      el("td",{class:"small"}, r.echeance||el("span",{class:"muted"},"(vide)")),
+      el("td",{html: r.flags.length ? flagBadges(r.flags) : '<span class="badge ok">RAS</span>'})
+    ));
+  });
+}
+
+function renderRamAnnulTable(sysVal){
+  let rows = RAM_AUDIT_ANNUL.slice();
+  if(sysVal) rows = rows.filter(r=>r.sys===sysVal);
+  const table = document.getElementById("tbl-ra-annul");
+  table.querySelector("thead").innerHTML = `<tr><th>Système</th><th>Réf DI</th><th>Date création</th><th>Motif d'annulation</th><th>Anomalie</th></tr>`;
+  const tbody = table.querySelector("tbody");
+  tbody.innerHTML = "";
+  if(!rows.length){
+    tbody.append(el("tr",{}, el("td",{colspan:"5"}, el("div",{class:"empty-state"},"Aucune DI annulée ce mois-ci."))));
+    return;
+  }
+  rows.forEach(r=>{
+    tbody.append(el("tr",{},
+      el("td",{}, r.sys), el("td",{}, el("span",{class:"code"}, r.code)),
+      el("td",{class:"small"}, r.date||"—"),
+      el("td",{class:"comment-cell small"}, r.motif||el("span",{class:"muted"},"(vide)")),
+      el("td",{html: r.vague? '<span class="badge warn">Motif sommaire</span>' : '<span class="badge ok">RAS</span>'})
+    ));
+  });
+}
+
+function renderRamAudit(){
+  runRamAudit();
+  const all = [...RAM_AUDIT_BT, ...RAM_AUDIT_DI];
+  const nbHs = all.filter(r=>r.flags.includes("motif_hs")).length;
+  const nbEch = all.filter(r=>r.flags.includes("echeance_vague")).length;
+  const nbAct = all.filter(r=>r.flags.includes("action_faible")).length;
+  const nbJustif = all.filter(r=>r.flags.includes("justif_incomplete")).length;
+  document.getElementById("cRamAudit").textContent = nbHs+nbEch+nbAct+nbJustif;
+
+  const kpi = document.getElementById("ramAuditKpi");
+  kpi.innerHTML = "";
+  function card(label,value,cls,foot){
+    kpi.append(el("div",{class:"kpi"},
+      el("div",{class:"label"}, label),
+      el("div",{class:"value "+(cls||"")}, value),
+      el("div",{class:"foot"}, foot)
+    ));
+  }
+  card("Lignes analysées (RAM)", all.length, "", `${RAM_AUDIT_BT.length} BT + ${RAM_AUDIT_DI.length} DI`);
+  card("Motifs « HS » non justifiés", nbHs, "red", "Cause réelle non précisée");
+  card("Justificatifs à détailler", nbJustif, "amber", "Motif présent mais sans type/référence (ex. « manque graisse »)");
+  card("Échéances imprécises", nbEch, "amber", "Vide ou semestre uniquement (S2-2026)");
+  card("Actions non recevables", nbAct, "red", "Vide, « / » ou sans démarche identifiable");
+
+  const sysSel = document.getElementById("ra-sys");
+  fillSelect(sysSel, [...new Set(all.map(r=>r.sys))].filter(Boolean).sort(), "Tous systèmes");
+  const flagSel = document.getElementById("ra-flag");
+  const onlyChk = document.getElementById("ra-onlyflag");
+
+  function apply(){
+    renderRamAuditTable("tbl-ra-bt", RAM_AUDIT_BT, sysSel.value, flagSel.value, onlyChk.checked);
+    renderRamAuditTable("tbl-ra-di", RAM_AUDIT_DI, sysSel.value, flagSel.value, onlyChk.checked);
+    renderRamAnnulTable(sysSel.value);
+  }
+  sysSel.onchange = apply; flagSel.onchange = apply; onlyChk.onchange = apply;
+  apply();
+
+  document.getElementById("ra-export").onclick = ()=>{
+    const rows = [];
+    all.forEach(r=> rows.push(["BT/DI RAM", r.sys, r.code, r.titre, r.motif, r.justif, r.action, r.echeance, r.flags.join(", ")||"RAS"]));
+    RAM_AUDIT_ANNUL.forEach(r=> rows.push(["DI annulée", r.sys, r.code, "", r.motif, r.motif, "", r.date, r.vague?"motif sommaire":"RAS"]));
+    downloadCsv("audit_rapport_RAM.csv",
+      ["Type","Système","Réf","Titre","Motif (brut RAM)","Justificatif détaillé (motif + tâche)","Action engagée","Échéance / Date","Anomalies"],
+      rows);
+  };
+}
+
+function buildRamIndex(ram){
+  RAM_INDEX = new Map();
+  RAM_CODES_SET = new Set();
+  const tables = [
+    {rows: ram.bt_preventifs_non_clotures, refKey:/r[ée]f\s*bt/i, kind:"BT préventif"},
+    {rows: ram.di_correctives_non_cloturees, refKey:/r[ée]f\s*di/i, kind:"DI corrective"}
+  ];
+  tables.forEach(t=>{
+    if(!t.rows || t.rows.length<2) return;
+    const header = t.rows[0];
+    const idxRef = header.findIndex(h=>t.refKey.test(h));
+    const idxMotif = header.findIndex(h=>/motif/i.test(h));
+    const idxAction = header.findIndex(h=>/action/i.test(h));
+    const idxDate = header.findIndex(h=>/date.*lancement/i.test(h));
+    const idxEch = header.findIndex(h=>/[ée]ch[ée]ance/i.test(h));
+    for(let i=1;i<t.rows.length;i++){
+      const row = t.rows[i];
+      if(!row || row.length<2) continue;
+      const refCell = idxRef>=0 ? row[idxRef] : row[1];
+      const m = (refCell||"").match(CODE_RE);
+      if(!m) continue;
+      const code = m[1];
+      const entry = {
+        code,
+        motif: idxMotif>=0 ? row[idxMotif] : "",
+        action: idxAction>=0 ? row[idxAction] : "",
+        echeance: idxEch>=0 ? row[idxEch] : "",
+        date_lancement: idxDate>=0 ? row[idxDate] : "",
+        kind: t.kind,
+        titre: refCell
+      };
+      RAM_INDEX.set(code, entry);
+      RAM_CODES_SET.add(code);
+    }
+  });
+  // also scan raw text of every table for any other BT/DI codes mentioned (fallback net for cross-check)
+  ["bt_preventifs_non_clotures","di_correctives_non_cloturees","di_annulees","top_pannes_MR","rames_immobilisees"].forEach(key=>{
+    const rows = ram[key];
+    if(!Array.isArray(rows)) return;
+    rows.forEach(row=>{
+      if(!Array.isArray(row)) return;
+      row.forEach(cell=>{
+        const matches = (cell||"").match(/(?:BT|DI)-[A-Z]{2,5}-\d{4}-\d+/g);
+        if(matches) matches.forEach(c=>RAM_CODES_SET.add(c));
+      });
+    });
+  });
+}
+
+function analyzeCorrectifs(rows){
+  return rows.map(r=>{
+    const etatDi = r.ETAT_DI || "";
+    const etatBt = r.ETAT_BT || "";
+    const commentaire = r.COMMENTAIRE_DI || "";
+    const closed = isClosed(etatDi) && isClosed(etatBt) && etatBt !== MISSING_PART_STATE;
+    const waitingPart = etatBt === MISSING_PART_STATE;
+    const missingSignal = waitingPart || MISSING_RE.test(commentaire);
+    const part = extractPart(commentaire);
+    const reform = needsReformulation(r.TITRE_DI, commentaire);
+    const ramEntry = r.CODE_DI ? RAM_INDEX.get(r.CODE_DI) : null;
+    return {
+      type:"Corrective", systeme:r.SYSTEME, sys:sysShort(r.SYSTEME),
+      code: r.CODE_DI, code_bt: r.CODE_BT, titre: r.TITRE_DI,
+      equipement: r.EQUIPEMENT, code_equipement: r.CODE_EQUIPEMENT,
+      etat_di: etatDi, etat_bt: etatBt, commentaire,
+      date: r.DATE_DI, date_cloture: r.DATE_CLOTURE,
+      closed, waitingPart, missingSignal, part, reform,
+      ramEntry
+    };
+  });
+}
+
+function analyzePreventifs(rows){
+  return rows.map(r=>{
+    const etatBt = r.ETAT_BT || "";
+    const cr = r.C_R || "";
+    const closed = isClosed(etatBt) && etatBt !== MISSING_PART_STATE;
+    const waitingPart = etatBt === MISSING_PART_STATE;
+    const missingSignal = waitingPart || MISSING_RE.test(cr);
+    const part = extractPart(cr);
+    const reform = needsReformulation(r.TITRE_BT, cr);
+    const ramEntry = r.CODE_BT ? RAM_INDEX.get(r.CODE_BT) : null;
+    return {
+      type:"Préventive", systeme:r.SYSTEME, sys:sysShort(r.SYSTEME),
+      code: r.CODE_BT, titre: r.TITRE_BT,
+      equipement: r.DESIGNATION_EQUIPEMENT, code_equipement: r.CODE_EQUIPEMENT,
+      etat_bt: etatBt, commentaire: cr,
+      date: r.DATE_PREVUE, date_cloture: r.DATE_CLOTURE,
+      closed, waitingPart, missingSignal, part, reform,
+      ramEntry
+    };
+  });
+}
+
+function runAnalysis(){
+  buildRamIndex(RAM_TABLES);
+  const rawC = SELECTED_UNIT ? RAW_CORRECTIFS.filter(r => r.__unit === SELECTED_UNIT) : RAW_CORRECTIFS;
+  const rawP = SELECTED_UNIT ? RAW_PREVENTIFS.filter(r => r.__unit === SELECTED_UNIT) : RAW_PREVENTIFS;
+  CORRECTIFS = analyzeCorrectifs(rawC);
+  PREVENTIFS = analyzePreventifs(rawP);
+  renderAll();
+}
+
+/* =========================================================================
+   REFORMULATIONS — persisted in localStorage
+   ========================================================================= */
+let REFORM_STORE = {};
+function loadReformStore(){
+  try{ REFORM_STORE = JSON.parse(localStorage.getItem("gmao_reform_store")||"{}"); }
+  catch(e){ REFORM_STORE = {}; }
+}
+function saveReformStore(){
+  try{ localStorage.setItem("gmao_reform_store", JSON.stringify(REFORM_STORE)); }catch(e){}
+}
+loadReformStore();
+
+/* =========================================================================
+   RENDER — helpers
+   ========================================================================= */
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function el(tag, attrs, ...children){
+  const e = document.createElement(tag);
+  if(attrs) Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="html") e.innerHTML = v; else if(k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k,v);
+  });
+  children.flat().forEach(c=>{ if(c!==null && c!==undefined) e.append(c.nodeType?c:document.createTextNode(c)); });
+  return e;
+}
+function fillSelect(select, values, currentAll){
+  const cur = select.value;
+  select.innerHTML = "";
+  select.append(el("option",{value:""}, currentAll));
+  values.forEach(v=> select.append(el("option",{value:v}, v)));
+  if(values.includes(cur)) select.value = cur;
+}
+function escapeCsv(v){
+  if(v===undefined||v===null) v="";
+  v = String(v).replace(/"/g,'""');
+  return `"${v}"`;
+}
+function downloadCsv(filename, headers, rows){
+  const lines = [headers.map(escapeCsv).join(";")];
+  rows.forEach(r=> lines.push(r.map(escapeCsv).join(";")));
+  const blob = new Blob(["\ufeff"+lines.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+/* =========================================================================
+   OVERVIEW
+   ========================================================================= */
+function renderOverview(){
+  const grid = document.getElementById("kpiGrid");
+  grid.innerHTML = "";
+  const totalC = CORRECTIFS.length, closedC = CORRECTIFS.filter(x=>x.closed).length;
+  const totalP = PREVENTIFS.length, closedP = PREVENTIFS.filter(x=>x.closed).length;
+  const missing = CORRECTIFS.filter(x=>x.missingSignal).length + PREVENTIFS.filter(x=>x.missingSignal).length;
+  const reform = CORRECTIFS.filter(x=>!x.closed && x.reform).length + PREVENTIFS.filter(x=>!x.closed && x.reform).length;
+
+  function kpi(label, value, foot, cls, pct){
+    const card = el("div",{class:"kpi"},
+      el("div",{class:"label"}, label),
+      el("div",{class:"value "+(cls||"")}, value),
+      el("div",{class:"foot"}, foot)
+    );
+    if(pct!==undefined){
+      card.append(el("div",{class:"bar"}, el("i",{style:`width:${pct}%`})));
+    }
+    grid.append(card);
+  }
+  kpi("DI/BT Correctifs", totalC, `${closedC} clôturés (${totalC?Math.round(closedC/totalC*100):0}%)`, "", totalC?closedC/totalC*100:0);
+  kpi("BT Préventifs", totalP, `${closedP} clôturés (${totalP?Math.round(closedP/totalP*100):0}%)`, "", totalP?closedP/totalP*100:0);
+  kpi("Manque pièce / conso.", missing, "BT/DI en attente de pièce", "amber");
+  kpi("Motifs à reformuler", reform, "Non clôturés, motif imprécis", "red");
+
+  document.getElementById("pillPieces").innerHTML = `<span class="dot"></span>${missing} pièces à consolider`;
+  document.getElementById("pillReform").innerHTML = `<span class="dot"></span>${reform} motifs à préciser`;
+
+  // systeme bars
+  const bySys = {};
+  [...CORRECTIFS, ...PREVENTIFS].forEach(x=>{
+    bySys[x.systeme] = bySys[x.systeme] || {total:0, closed:0};
+    bySys[x.systeme].total++;
+    if(x.closed) bySys[x.systeme].closed++;
+  });
+  const sysBars = document.getElementById("sysBars");
+  sysBars.innerHTML = "";
+  Object.entries(bySys).sort((a,b)=>b[1].total-a[1].total).forEach(([sys, d])=>{
+    const pct = d.total? Math.round(d.closed/d.total*100):0;
+    sysBars.append(el("div",{class:"sys-row"},
+      el("div",{class:"name"}, sysShort(sys)),
+      el("div",{class:"track"}, el("i",{style:`width:${pct}%;background:${sysColor(sys)}`})),
+      el("div",{class:"val"}, `${pct}% (${d.closed}/${d.total})`)
+    ));
+  });
+
+  // attention list
+  const att = document.getElementById("attentionList");
+  att.innerHTML = "";
+  const items = [];
+  const ramOrphans = [...RAM_CODES_SET].filter(c=>{
+    return !CORRECTIFS.some(x=>x.code===c || x.code_bt===c) && !PREVENTIFS.some(x=>x.code===c);
+  });
+  items.push([`${missing} BT/DI signalent un manque de pièce ou consommable`, "pieces"]);
+  items.push([`${reform} motifs de panne non explicites à reformuler`, "reformuler"]);
+  items.push([`${ramOrphans.length} référence(s) RAM introuvables dans les exports GMAO`, "ram"]);
+  const nonClosC = CORRECTIFS.filter(x=>!x.closed).length;
+  const nonClosP = PREVENTIFS.filter(x=>!x.closed).length;
+  items.push([`${nonClosC} DI/BT correctifs non clôturés`, "correctifs"]);
+  items.push([`${nonClosP} BT préventifs non clôturés`, "preventifs"]);
+  items.forEach(([txt,tab])=>{
+    att.append(el("div",{class:"sys-row", style:"grid-template-columns:1fr auto;cursor:pointer;", onclick:()=>switchTab(tab)},
+      el("div",{class:"name"}, txt),
+      el("div",{class:"val"}, "→")
+    ));
+  });
+}
+
+/* =========================================================================
+   GENERIC LIST RENDERING (correctifs & preventifs)
+   ========================================================================= */
+function badgeForItem(x){
+  if(x.closed) return `<span class="badge ok">Clôturé</span>`;
+  if(x.waitingPart) return `<span class="badge bad">Attente pièce</span>`;
+  if(x.missingSignal) return `<span class="badge warn">Manque signalé</span>`;
+  return `<span class="badge muted">${x.etat_bt||x.etat_di||"—"}</span>`;
+}
+
+function setupFilters(prefix, data, tableId, extraCols){
+  const sysSel = document.getElementById(prefix+"-sys");
+  const etatSel = document.getElementById(prefix+"-etat");
+  fillSelect(sysSel, [...new Set(data.map(x=>x.sys))].sort(), "Tous systèmes");
+  fillSelect(etatSel, [...new Set(data.map(x=>x.etat_bt||x.etat_di))].filter(Boolean).sort(), "Tous états");
+
+  function apply(){
+    let rows = data.slice();
+    if(sysSel.value) rows = rows.filter(x=>x.sys===sysSel.value);
+    if(etatSel.value) rows = rows.filter(x=>(x.etat_bt||x.etat_di)===etatSel.value);
+    const nonclos = document.getElementById(prefix+"-nonclos");
+    if(nonclos && nonclos.checked) rows = rows.filter(x=>!x.closed);
+    const manque = document.getElementById(prefix+"-manque");
+    if(manque && manque.checked) rows = rows.filter(x=>x.missingSignal);
+    const search = document.getElementById(prefix+"-search");
+    if(search && search.value.trim()){
+      const q = search.value.trim().toLowerCase();
+      rows = rows.filter(x => [x.code,x.code_bt,x.equipement,x.code_equipement,x.titre,x.commentaire].join(" ").toLowerCase().includes(q));
+    }
+    renderTable(tableId, rows, extraCols);
+  }
+  [sysSel, etatSel].forEach(s=>s.addEventListener("change", apply));
+  const nc = document.getElementById(prefix+"-nonclos"); if(nc) nc.addEventListener("change", apply);
+  const mq = document.getElementById(prefix+"-manque"); if(mq) mq.addEventListener("change", apply);
+  const se = document.getElementById(prefix+"-search"); if(se) se.addEventListener("input", apply);
+  apply();
+  return apply;
+}
+
+function renderTable(tableId, rows, isCorrectif){
+  const table = document.getElementById(tableId);
+  const thead = table.querySelector("thead");
+  const tbody = table.querySelector("tbody");
+  thead.innerHTML = `<tr>
+    <th>Système</th><th>Code</th><th>Équipement</th><th>Titre</th>
+    <th>État</th><th>Statut analyse</th><th class="comment-cell">Commentaire</th><th>Pièce détectée</th><th>RAM</th>
+  </tr>`;
+  tbody.innerHTML = "";
+  if(!rows.length){
+    tbody.append(el("tr",{}, el("td",{colspan:"9"}, el("div",{class:"empty-state"}, el("b",{},"Aucun résultat"), "Ajustez les filtres ci-dessus."))));
+    return;
+  }
+  rows.forEach(x=>{
+    const ramBadge = x.ramEntry
+      ? `<span class="badge ok" title="${(x.ramEntry.motif||'').replace(/"/g,'')}">Documenté RAM</span>`
+      : (!x.closed ? `<span class="badge warn">Absent du RAM</span>` : `<span class="badge muted">—</span>`);
+    tbody.append(el("tr",{},
+      el("td",{}, x.sys),
+      el("td",{}, el("span",{class:"code"}, x.code), x.code_bt? el("div",{class:"small muted"}, x.code_bt) : ""),
+      el("td",{}, x.equipement || x.code_equipement || "—"),
+      el("td",{}, x.titre||"—"),
+      el("td",{}, x.etat_bt || x.etat_di || "—"),
+      el("td",{html: badgeForItem(x) + (x.reform && !x.closed ? ' <span class="badge bad">À reformuler</span>':"")}),
+      el("td",{class:"comment-cell small"}, x.commentaire||"—"),
+      el("td",{class:"small"}, x.part || (x.missingSignal? "—" : "")),
+      el("td",{html: ramBadge})
+    ));
+  });
+}
+
+/* =========================================================================
+   PIECES CONSOLIDATION
+   ========================================================================= */
+function computePiecesConsolidation(){
+  const all = [...CORRECTIFS, ...PREVENTIFS].filter(x=>x.missingSignal);
+  const groups = new Map();
+  all.forEach(x=>{
+    const key = (x.part ? x.part.toLowerCase() : (x.titre||"non précisé").toLowerCase()) + "||" + x.sys;
+    if(!groups.has(key)){
+      groups.set(key, {
+        sys: x.sys, label: x.part || x.titre || "Non précisé",
+        codes: [], count:0, ramDa: null
+      });
+    }
+    const g = groups.get(key);
+    g.count++;
+    g.codes.push(x.code);
+    if(x.ramEntry && x.ramEntry.action) g.ramDa = x.ramEntry.action;
+  });
+  return [...groups.values()].sort((a,b)=>b.count-a.count);
+}
+
+function renderPieces(){
+  const data = computePiecesConsolidation();
+  document.getElementById("cPieces").textContent = data.length;
+  const sysSel = document.getElementById("pc-sys");
+  fillSelect(sysSel, [...new Set(data.map(x=>x.sys))].sort(), "Tous systèmes");
+  const daSel = document.getElementById("pc-da");
+
+  function apply(){
+    let rows = data.slice();
+    if(sysSel.value) rows = rows.filter(x=>x.sys===sysSel.value);
+    if(daSel.value==="da_ok") rows = rows.filter(x=>x.ramDa);
+    if(daSel.value==="da_missing") rows = rows.filter(x=>!x.ramDa);
+
+    const table = document.getElementById("tbl-pieces");
+    table.querySelector("thead").innerHTML = `<tr>
+      <th>Système</th><th>Pièce / consommable</th><th>Nb BT/DI concernés</th><th>Codes</th><th>Statut DA</th>
+    </tr>`;
+    const tbody = table.querySelector("tbody");
+    tbody.innerHTML = "";
+    if(!rows.length){
+      tbody.append(el("tr",{}, el("td",{colspan:"5"}, el("div",{class:"empty-state"}, el("b",{},"Rien à afficher"), "Aucune pièce ne correspond aux filtres."))));
+      return;
+    }
+    rows.forEach(g=>{
+      tbody.append(el("tr",{},
+        el("td",{}, g.sys),
+        el("td",{style:"text-transform:capitalize;"}, g.label),
+        el("td",{}, g.count),
+        el("td",{class:"small"}, g.codes.map(c=>`<span class="code">${c}</span>`).join(", ")),
+        el("td",{html: g.ramDa ? `<span class="badge ok">${g.ramDa}</span>` : `<span class="badge bad">DA à lancer</span>`})
+      ));
+    });
+  }
+  sysSel.addEventListener("change", apply);
+  daSel.addEventListener("change", apply);
+  apply();
+
+  document.getElementById("pc-export").onclick = ()=>{
+    const rows = computePiecesConsolidation().filter(g=>!g.ramDa);
+    downloadCsv("pieces_DA_a_lancer.csv",
+      ["Système","Pièce / consommable","Nb BT-DI","Codes"],
+      rows.map(g=>[g.sys, g.label, g.count, g.codes.join(" | ")]));
+  };
+}
+
+/* =========================================================================
+   REFORMULATION TAB
+   ========================================================================= */
+function renderReformuler(){
+  const all = [...CORRECTIFS, ...PREVENTIFS].filter(x=>!x.closed && x.reform);
+  document.getElementById("cReform").textContent = all.length;
+  const sysSel = document.getElementById("rf-sys");
+  fillSelect(sysSel, [...new Set(all.map(x=>x.sys))].sort(), "Tous systèmes");
+
+  function apply(){
+    let rows = all.slice();
+    if(sysSel.value) rows = rows.filter(x=>x.sys===sysSel.value);
+    const table = document.getElementById("tbl-reformuler");
+    table.querySelector("thead").innerHTML = `<tr>
+      <th>Système</th><th>Code</th><th>Équipement</th><th>Titre</th><th>Commentaire GMAO</th><th style="min-width:220px;">Motif reformulé</th>
+    </tr>`;
+    const tbody = table.querySelector("tbody");
+    tbody.innerHTML = "";
+    if(!rows.length){
+      tbody.append(el("tr",{}, el("td",{colspan:"6"}, el("div",{class:"empty-state"}, el("b",{},"Aucun motif à reformuler"), "Tous les commentaires non clôturés sont suffisamment détaillés."))));
+      return;
+    }
+    rows.forEach(x=>{
+      const ta = el("textarea",{class:"reform", placeholder:"Décrire précisément la panne / le motif…"});
+      ta.value = REFORM_STORE[x.code] || "";
+      ta.addEventListener("input", ()=>{ REFORM_STORE[x.code] = ta.value; saveReformStore(); });
+      tbody.append(el("tr",{},
+        el("td",{}, x.sys),
+        el("td",{}, el("span",{class:"code"}, x.code)),
+        el("td",{}, x.equipement || x.code_equipement || "—"),
+        el("td",{}, x.titre||"—"),
+        el("td",{class:"comment-cell small"}, x.commentaire||el("span",{class:"muted"},"(vide)")),
+        el("td",{}, ta)
+      ));
+    });
+  }
+  sysSel.addEventListener("change", apply);
+  apply();
+
+  document.getElementById("rf-export").onclick = ()=>{
+    downloadCsv("motifs_reformules.csv",
+      ["Système","Code","Équipement","Titre","Commentaire GMAO","Motif reformulé"],
+      all.map(x=>[x.sys, x.code, x.equipement||x.code_equipement, x.titre, x.commentaire, REFORM_STORE[x.code]||""]));
+  };
+  document.getElementById("rf-clear").onclick = ()=>{
+    if(confirm("Effacer toutes les reformulations saisies localement ?")){
+      REFORM_STORE = {}; saveReformStore(); apply();
+    }
+  };
+}
+
+/* =========================================================================
+   RAM COHERENCE TAB
+   ========================================================================= */
+function renderRam(){
+  const exportCodes = new Map();
+  CORRECTIFS.forEach(x=>{ if(x.code) exportCodes.set(x.code, x); if(x.code_bt) exportCodes.set(x.code_bt, x); });
+  PREVENTIFS.forEach(x=>{ if(x.code) exportCodes.set(x.code, x); });
+
+  const nonClosExport = [...CORRECTIFS, ...PREVENTIFS].filter(x=>!x.closed);
+  const missingFromRam = nonClosExport.filter(x=> !x.ramEntry );
+  const orphanRam = [...RAM_CODES_SET].filter(c=>!exportCodes.has(c));
+  const matched = nonClosExport.filter(x=>x.ramEntry);
+
+  document.getElementById("cRam").textContent = missingFromRam.length + orphanRam.length;
+
+  const t1 = document.getElementById("tbl-ram-missing");
+  t1.querySelector("thead").innerHTML = `<tr><th>Système</th><th>Code</th><th>Titre</th><th>État</th></tr>`;
+  const b1 = t1.querySelector("tbody"); b1.innerHTML = "";
+  if(!missingFromRam.length){
+    b1.append(el("tr",{}, el("td",{colspan:"4"}, el("div",{class:"empty-state small"},"Aucun écart — tous les éléments non clôturés sont documentés dans le RAM."))));
+  } else {
+    missingFromRam.forEach(x=>{
+      b1.append(el("tr",{}, el("td",{},x.sys), el("td",{},el("span",{class:"code"},x.code)), el("td",{class:"small"},x.titre||"—"), el("td",{},x.etat_bt||x.etat_di||"—")));
+    });
+  }
+
+  const t2 = document.getElementById("tbl-ram-orphan");
+  t2.querySelector("thead").innerHTML = `<tr><th>Code référencé dans le RAM</th></tr>`;
+  const b2 = t2.querySelector("tbody"); b2.innerHTML = "";
+  if(!orphanRam.length){
+    b2.append(el("tr",{}, el("td",{}, el("div",{class:"empty-state small"},"Aucun écart — tous les codes du RAM se retrouvent dans les exports."))));
+  } else {
+    orphanRam.forEach(c=>{
+      b2.append(el("tr",{}, el("td",{}, el("span",{class:"code"},c), ' ', el("span",{class:"muted small"},"— clôturé depuis, ou codification différente"))));
+    });
+  }
+
+  const t3 = document.getElementById("tbl-ram-matched");
+  t3.querySelector("thead").innerHTML = `<tr><th>Système</th><th>Code</th><th>Motif (RAM)</th><th>Action engagée (RAM)</th><th>Échéance</th></tr>`;
+  const b3 = t3.querySelector("tbody"); b3.innerHTML = "";
+  if(!matched.length){
+    b3.append(el("tr",{}, el("td",{colspan:"5"}, el("div",{class:"empty-state small"},"Aucune correspondance."))));
+  } else {
+    matched.forEach(x=>{
+      b3.append(el("tr",{},
+        el("td",{},x.sys), el("td",{},el("span",{class:"code"},x.code)),
+        el("td",{class:"small"},x.ramEntry.motif||"—"),
+        el("td",{class:"small"},x.ramEntry.action||"—"),
+        el("td",{class:"small"},x.ramEntry.echeance||"—")
+      ));
+    });
+  }
+}
+
+/* =========================================================================
+   TAB SWITCHING
+   ========================================================================= */
+/* =========================================================================
+   TMP / TMC — recalcul depuis la GMAO + comparaison RAM
+   ========================================================================= */
+function pctToNum(str){
+  if(str===undefined||str===null) return null;
+  const s = String(str).replace(",",".");
+  const m = s.match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+const TMC_OK_STATES = new Set(["Traîtée","Traitée","Réalisé"]);
+const TMP_OK_STATES = new Set(["Clos","Fait"]);
+
+function computeGmaoRates(){
+  const srcCorr = SELECTED_UNIT ? RAW_CORRECTIFS.filter(r=>r.__unit===SELECTED_UNIT) : RAW_CORRECTIFS;
+  const srcPrev = SELECTED_UNIT ? RAW_PREVENTIFS.filter(r=>r.__unit===SELECTED_UNIT) : RAW_PREVENTIFS;
+  const CANCELLED_DI_STATES = new Set(["annulé","annulée","annule","annulee"]);
+  const corrOnly = srcCorr.filter(r=>
+    (r.TYPE_TRAVAUX||"").trim().toLowerCase()==="corrective" &&
+    !CANCELLED_DI_STATES.has((r.ETAT_DI||"").trim().toLowerCase())
+  );
+  const tmcOk = corrOnly.filter(r=> TMC_OK_STATES.has((r.ETAT_DI||"").trim())).length;
+  const tmc = corrOnly.length ? tmcOk/corrOnly.length*100 : null;
+
+  const tmpOk = srcPrev.filter(r=> TMP_OK_STATES.has((r.ETAT_BT||"").trim())).length;
+  const tmp = srcPrev.length ? tmpOk/srcPrev.length*100 : null;
+
+  function bySys(rows, okFn){
+    const g = {};
+    rows.forEach(r=>{
+      const s = sysShort(r.SYSTEME);
+      g[s] = g[s] || {ok:0, total:0};
+      g[s].total++;
+      if(okFn(r)) g[s].ok++;
+    });
+    const out = {};
+    Object.entries(g).forEach(([s,v])=> out[s] = v.total ? v.ok/v.total*100 : null);
+    return out;
+  }
+  const tmcSys = bySys(corrOnly, r=>TMC_OK_STATES.has((r.ETAT_DI||"").trim()));
+  const tmpSys = bySys(srcPrev, r=>TMP_OK_STATES.has((r.ETAT_BT||"").trim()));
+
+  return {tmc, tmp, tmcSys, tmpSys, nCorrOk:tmcOk, nCorrTotal:corrOnly.length, nPrevOk:tmpOk, nPrevTotal:srcPrev.length};
+}
+
+function findIndicateur(nameRe){
+  return (RAM_TABLES.indicateurs_cles||[]).find(x=>nameRe.test(x.indicateur));
+}
+function chartCurrentSeries(chartKey){
+  const c = (RAM_TABLES.charts||{})[chartKey];
+  if(!c || !c.series || c.series.length<2) return null;
+  return c.series[1]; // series[1] = année/mois courant (validé empiriquement contre les tableaux du RAM)
+}
+function chartMonthValue(chartKey, monthLabelRe){
+  const s = chartCurrentSeries(chartKey);
+  const cGlobal = (RAM_TABLES.charts||{})[chartKey];
+  if(!s || !cGlobal) return null;
+  const cats = cGlobal.series[0].categories; // categories identiques sur toutes les séries
+  const idx = cats.findIndex(c=>monthLabelRe.test(c));
+  if(idx<0 || idx>=s.values.length) return null;
+  return s.values[idx]*100;
+}
+function chartSysMap(chartKey){
+  const s = chartCurrentSeries(chartKey);
+  const cGlobal = (RAM_TABLES.charts||{})[chartKey];
+  if(!s || !cGlobal) return {};
+  const cats = cGlobal.series[0].categories;
+  const out = {};
+  cats.forEach((c,i)=>{ if(i<s.values.length) out[c] = s.values[i]*100; });
+  return out;
+}
+function ramSysTableMap(tableKey, colIndex){
+  const rows = (RAM_TABLES[tableKey]||[]);
+  const out = {};
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || !r[0]) continue;
+    const v = pctToNum(r[colIndex]);
+    if(v!==null) out[r[0].trim()] = v;
+  }
+  return out;
+}
+
+function renderTaux(){
+  const gmao = computeGmaoRates();
+  const currentMonthRe = /juin/i; // rapport de juin 2026 — ajusté automatiquement si un autre RAM est importé (voir hint)
+
+  const ramTmpTable = findIndicateur(/pr[ée]ventive.*infrastructure/i);
+  const ramTmcTable = findIndicateur(/corrective.*infrastructure/i);
+  const ramTmpGraph = chartMonthValue("tmp_global", currentMonthRe);
+  const ramTmcGraph = chartMonthValue("tmc_global", currentMonthRe);
+  const ramTmpTableVal = ramTmpTable ? pctToNum(ramTmpTable.m_a) : null;
+  const ramTmcTableVal = ramTmcTable ? pctToNum(ramTmcTable.m_a) : null;
+
+  document.getElementById("cTaux").textContent =
+    [ramTmpGraph!==null && ramTmpTableVal!==null && Math.abs(ramTmpGraph-ramTmpTableVal)>0.5,
+     ramTmcGraph!==null && ramTmcTableVal!==null && Math.abs(ramTmcGraph-ramTmcTableVal)>0.5].filter(Boolean).length;
+
+  const kpi = document.getElementById("tauxKpiGlobal");
+  kpi.innerHTML = "";
+  function card(label,value,cls,foot){
+    kpi.append(el("div",{class:"kpi"},
+      el("div",{class:"label"}, label),
+      el("div",{class:"value "+(cls||"")}, value),
+      el("div",{class:"foot"}, foot)
+    ));
+  }
+  card("TMP recalculé (GMAO)", gmao.tmp!==null?gmao.tmp.toFixed(2)+"%":"—", "", `${gmao.nPrevOk}/${gmao.nPrevTotal} BT préventifs`);
+  card("TMP — RAM (mois courant)", ramTmpTableVal!==null?ramTmpTableVal.toFixed(2)+"%":"—", "teal", "Tableau « indicateurs clés »");
+  const ecartTmp = (gmao.tmp!==null && ramTmpTableVal!==null) ? gmao.tmp-ramTmpTableVal : null;
+  card("Écart TMP (GMAO − RAM)", ecartTmp!==null?(ecartTmp>=0?"+":"")+ecartTmp.toFixed(2)+" pt":"—", Math.abs(ecartTmp||0)>1?"red":"amber", Math.abs(ecartTmp||0)>1?"Écart à vérifier":"Écart faible");
+  card("TMC recalculé (GMAO)", gmao.tmc!==null?gmao.tmc.toFixed(2)+"%":"—", "", `${gmao.nCorrOk}/${gmao.nCorrTotal} DI correctives (hors travaux divers)`);
+  card("TMC — RAM (mois courant)", ramTmcTableVal!==null?ramTmcTableVal.toFixed(2)+"%":"—", "teal", "Tableau « indicateurs clés »");
+  const ecartTmc = (gmao.tmc!==null && ramTmcTableVal!==null) ? gmao.tmc-ramTmcTableVal : null;
+  card("Écart TMC (GMAO − RAM)", ecartTmc!==null?(ecartTmc>=0?"+":"")+ecartTmc.toFixed(2)+" pt":"—", Math.abs(ecartTmc||0)>1?"red":"amber", Math.abs(ecartTmc||0)>1?"Écart à vérifier":"Écart faible");
+
+  // coherence graphique/tableau
+  const coh = document.getElementById("tbl-taux-coherence");
+  coh.querySelector("thead").innerHTML = `<tr><th>Indicateur</th><th>Valeur — tableau RAM (M A)</th><th>Valeur — graphique RAM (M A)</th><th>Écart</th><th>Cohérence</th></tr>`;
+  const cohBody = coh.querySelector("tbody"); cohBody.innerHTML = "";
+  [
+    {label:"Taux de maintenance préventive des Infrastructures", table:ramTmpTableVal, graph:ramTmpGraph},
+    {label:"Taux de maintenance corrective des Infrastructures", table:ramTmcTableVal, graph:ramTmcGraph}
+  ].forEach(r=>{
+    const ecart = (r.table!==null && r.graph!==null) ? r.graph-r.table : null;
+    const ok = ecart!==null && Math.abs(ecart)<=0.5;
+    cohBody.append(el("tr",{},
+      el("td",{}, r.label),
+      el("td",{}, r.table!==null?r.table.toFixed(2)+"%":"—"),
+      el("td",{}, r.graph!==null?r.graph.toFixed(2)+"%":"—"),
+      el("td",{}, ecart!==null?ecart.toFixed(2)+" pt":"—"),
+      el("td",{html: r.table===null||r.graph===null ? '<span class="badge muted">Non trouvé</span>' : (ok? '<span class="badge ok">Cohérent</span>' : '<span class="badge bad">Incohérent — à vérifier</span>')})
+    ));
+  });
+
+  // par systeme
+  function renderSysCompare(tableId, gmaoSys, ramChartKey){
+    const ramSys = chartSysMap(ramChartKey);
+    const table = document.getElementById(tableId);
+    table.querySelector("thead").innerHTML = `<tr><th>Système</th><th>GMAO recalculé</th><th>RAM (graphique, mois courant)</th><th>Écart</th><th>Statut</th></tr>`;
+    const tbody = table.querySelector("tbody"); tbody.innerHTML="";
+    const systems = [...new Set([...Object.keys(gmaoSys), ...Object.keys(ramSys)])].sort();
+    systems.forEach(sys=>{
+      const g = gmaoSys[sys], r = ramSys[sys];
+      const ecart = (g!==undefined && g!==null && r!==undefined && r!==null) ? g-r : null;
+      const flag = ecart!==null && Math.abs(ecart)>2;
+      tbody.append(el("tr",{},
+        el("td",{}, sys),
+        el("td",{}, g!==undefined&&g!==null? g.toFixed(2)+"%" : "—"),
+        el("td",{}, r!==undefined&&r!==null? r.toFixed(2)+"%" : "—"),
+        el("td",{}, ecart!==null? (ecart>=0?"+":"")+ecart.toFixed(2)+" pt" : "—"),
+        el("td",{html: ecart===null? '<span class="badge muted">Non comparable</span>' : (flag? '<span class="badge bad">Écart &gt; 2pt — à vérifier</span>' : '<span class="badge ok">Cohérent</span>')})
+      ));
+    });
+  }
+  renderSysCompare("tbl-tmp-sys", gmao.tmpSys, "tmp_par_systeme");
+  renderSysCompare("tbl-tmc-sys", gmao.tmcSys, "tmc_par_systeme");
+
+  // tableau RAM §4.1.1.1 (par système) vs graphique RAM
+  function renderRamTableVsChart(tableId, ramTableKey, chartKey){
+    const ramTable = ramSysTableMap(ramTableKey, 4); // colonne "Taux/système M(A)"
+    const ramChart = chartSysMap(chartKey);
+    const table = document.getElementById(tableId);
+    table.querySelector("thead").innerHTML = `<tr><th>Système</th><th>Tableau RAM §4.1.1.1</th><th>Graphique RAM</th><th>Écart</th><th>Statut</th></tr>`;
+    const tbody = table.querySelector("tbody"); tbody.innerHTML="";
+    const systems = [...new Set([...Object.keys(ramTable), ...Object.keys(ramChart)])].sort();
+    if(!systems.length){
+      tbody.append(el("tr",{}, el("td",{colspan:"5"}, el("div",{class:"empty-state"},"Tableau §4.1.1.1 non détecté dans le RAM importé."))));
+      return;
+    }
+    systems.forEach(sys=>{
+      const t = ramTable[sys], g = ramChart[sys];
+      const ecart = (t!==undefined && g!==undefined) ? g-t : null;
+      const flag = ecart!==null && Math.abs(ecart)>0.5;
+      tbody.append(el("tr",{},
+        el("td",{}, sys),
+        el("td",{}, t!==undefined? t.toFixed(2)+"%" : "—"),
+        el("td",{}, g!==undefined? g.toFixed(2)+"%" : "—"),
+        el("td",{}, ecart!==null? (ecart>=0?"+":"")+ecart.toFixed(2)+" pt" : "—"),
+        el("td",{html: ecart===null? '<span class="badge muted">Non comparable</span>' : (flag? '<span class="badge bad">Incohérent — à vérifier</span>' : '<span class="badge ok">Cohérent</span>')})
+      ));
+    });
+  }
+  renderRamTableVsChart("tbl-tmp-sys-ram", "tmp_par_systeme_table", "tmp_par_systeme");
+  renderRamTableVsChart("tbl-tmc-sys-ram", "tmc_par_systeme_table", "tmc_par_systeme");
+}
+
+/* =========================================================================
+   MATERIEL ROULANT (rapport RAM uniquement)
+   ========================================================================= */
+function analyzeRamesImmobilisees(rows){
+  if(!rows || rows.length<2) return [];
+  const header = rows[0];
+  const idxRame = header.findIndex(h=>/n.*rame/i.test(h));
+  const idxDateImmob = header.findIndex(h=>/date.*immobilisation/i.test(h));
+  const idxRaison = header.findIndex(h=>/raison/i.test(h));
+  const idxDuree = header.findIndex(h=>/dur[ée]e/i.test(h));
+  const idxAction = header.findIndex(h=>/action/i.test(h));
+  const idxDA = header.findIndex(h=>/r[ée]f.*da/i.test(h));
+  const idxDateEst = header.findIndex(h=>/estimative/i.test(h));
+  const idxDateReelle = header.findIndex(h=>/r[ée]elle/i.test(h));
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const row = rows[i];
+    if(!row || !row.length || !row[idxRame]) continue;
+    const action = idxAction>=0 ? (row[idxAction]||"") : "";
+    const da = idxDA>=0 ? (row[idxDA]||"").trim() : "";
+    const duree = idxDuree>=0 ? (parseFloat((row[idxDuree]||"").replace(",","."))||0) : 0;
+    const dateEst = idxDateEst>=0 ? (row[idxDateEst]||"").trim() : "";
+    const dateReelle = idxDateReelle>=0 ? (row[idxDateReelle]||"").trim() : "";
+    const flags = [];
+    if(/service\s+commercial|service\s+marketing/i.test(action)) flags.push("hors_maintenance");
+    // Rames : travaux réalisés par un prestataire externe -> pas de DA/BC attendue.
+    // On exige seulement une justification (action engagée) et une date de remise en état (estimative ou réelle).
+    if((!action || action==="/") && duree>15) flags.push("justif_manquante");
+    if((!dateEst || /^nc$/i.test(dateEst)) && (!dateReelle || dateReelle==="/")) flags.push("date_non_estimee");
+    out.push({
+      rame: row[idxRame], dateImmob: idxDateImmob>=0?row[idxDateImmob]:"",
+      raison: idxRaison>=0?row[idxRaison]:"", duree, action, da,
+      dateEst, dateReelle: idxDateReelle>=0?row[idxDateReelle]:"", flags
+    });
+  }
+  return out;
+}
+
+function mrFlagBadges(flags){
+  const map = {
+    hors_maintenance: ["bad","Action hors périmètre maintenance"],
+    justif_manquante: ["warn","Justification manquante"],
+    date_non_estimee: ["warn","Date non estimée"]
+  };
+  return flags.map(f=>{ const [cls,label]=map[f]||["muted",f]; return `<span class="badge ${cls}">${label}</span>`; }).join(" ");
+}
+
+function renderMr(){
+  const immob = analyzeRamesImmobilisees(RAM_TABLES.rames_immobilisees);
+  const pannes = (RAM_TABLES.top_pannes_MR||[]).slice(1);
+  document.getElementById("cMr").textContent = immob.filter(r=>r.flags.length>0).length;
+
+  const kpi = document.getElementById("mrKpi");
+  kpi.innerHTML = "";
+  function card(label,value,cls,foot){
+    kpi.append(el("div",{class:"kpi"},
+      el("div",{class:"label"}, label),
+      el("div",{class:"value "+(cls||"")}, value),
+      el("div",{class:"foot"}, foot)
+    ));
+  }
+  const tmpRames = findIndicateur(/pr[ée]ventive des rames/i);
+  const dispoRames = findIndicateur(/disponibilit[ée] des rames/i);
+  const totalJours = immob.reduce((s,r)=>s+(r.duree||0),0);
+  card("Taux de maintenance préventive des rames", tmpRames?tmpRames.m_a:"—", "", tmpRames?`Objectif ${tmpRames.objectif} — écart ${tmpRames.ecart}`:"");
+  card("Taux de disponibilité des rames", dispoRames?dispoRames.m_a:"—", "", dispoRames?`Objectif ${dispoRames.objectif}`:"");
+  card("Rames immobilisées", immob.length, immob.some(r=>r.flags.length)?"amber":"", `${totalJours} jours cumulés d'immobilisation`);
+  card("Anomalies de suivi détectées", immob.filter(r=>r.flags.length>0).length, "red", "Action/DA/date non conformes");
+
+  const tp = document.getElementById("tbl-mr-pannes");
+  tp.querySelector("thead").innerHTML = `<tr><th>Panne signalée</th><th>Nb signalements</th><th>Analyse des causes</th><th>Action engagée</th><th>Échéance</th></tr>`;
+  const tpBody = tp.querySelector("tbody"); tpBody.innerHTML = "";
+  pannes.forEach(r=>{
+    tpBody.append(el("tr",{},
+      el("td",{}, r[0]||"—"), el("td",{}, r[1]||"—"),
+      el("td",{class:"comment-cell small"}, r[2]||"—"),
+      el("td",{class:"comment-cell small"}, r[3]||"—"),
+      el("td",{class:"small"}, r[5]||r[4]||"—")
+    ));
+  });
+
+  const ti = document.getElementById("tbl-mr-immob");
+  ti.querySelector("thead").innerHTML = `<tr><th>Rame</th><th>Date immob.</th><th>Raison</th><th>Durée (j)</th><th>Action engagée</th><th>Réf DA/BC</th><th>Date estimative</th><th>Date réelle</th><th>Anomalies</th></tr>`;
+  const tiBody = ti.querySelector("tbody"); tiBody.innerHTML = "";
+  if(!immob.length){
+    tiBody.append(el("tr",{}, el("td",{colspan:"9"}, el("div",{class:"empty-state"},"Aucune rame immobilisée ce mois-ci."))));
+  } else {
+    immob.forEach(r=>{
+      tiBody.append(el("tr",{},
+        el("td",{}, el("span",{class:"code"}, r.rame)),
+        el("td",{class:"small"}, r.dateImmob||"—"),
+        el("td",{class:"comment-cell small"}, r.raison||"—"),
+        el("td",{}, r.duree||"—"),
+        el("td",{class:"comment-cell small"}, r.action||"—"),
+        el("td",{class:"small"}, r.da||"—"),
+        el("td",{class:"small"}, r.dateEst||"—"),
+        el("td",{class:"small"}, r.dateReelle||"—"),
+        el("td",{html: r.flags.length? mrFlagBadges(r.flags) : '<span class="badge ok">RAS</span>'})
+      ));
+    });
+  }
+}
+
+function switchTab(tab){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active", v.id==="view-"+tab));
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>{
+  b.addEventListener("click", ()=>switchTab(b.dataset.tab));
+});
+
+/* =========================================================================
+   RENDER ALL
+   ========================================================================= */
+function renderAll(){
+  document.getElementById("sourceLabel").textContent = "Source : " + SOURCE_LABEL;
+  document.getElementById("pillMonth").innerHTML = `<span class="dot"></span>${SOURCE_LABEL}`;
+  document.getElementById("cCorrectifs").textContent = CORRECTIFS.length;
+  document.getElementById("cPreventifs").textContent = PREVENTIFS.length;
+  renderRamAudit();
+  renderRamAudit();
+  renderOverview();
+  setupFilters("cf", CORRECTIFS, "tbl-correctifs", true);
+  setupFilters("pf", PREVENTIFS, "tbl-preventifs", false);
+  renderPieces();
+  renderReformuler();
+  renderRam();
+  renderTaux();
+  renderMr();
+  renderSynthese();
+
+  document.getElementById("cf-export").onclick = ()=>{
+    downloadCsv("correctifs_analyse.csv",
+      ["Système","Code DI","Code BT","Équipement","Titre","État DI","État BT","Commentaire","Manque signalé","Pièce détectée","Motif à reformuler","RAM motif"],
+      CORRECTIFS.map(x=>[x.sys,x.code,x.code_bt,x.equipement||x.code_equipement,x.titre,x.etat_di,x.etat_bt,x.commentaire,x.missingSignal?"Oui":"Non",x.part,x.reform&&!x.closed?"Oui":"Non", x.ramEntry?x.ramEntry.motif:""]));
+  };
+  document.getElementById("pf-export").onclick = ()=>{
+    downloadCsv("preventifs_analyse.csv",
+      ["Système","Code BT","Équipement","Titre","État BT","Commentaire","Manque signalé","Pièce détectée","Motif à reformuler","RAM motif"],
+      PREVENTIFS.map(x=>[x.sys,x.code,x.equipement||x.code_equipement,x.titre,x.etat_bt,x.commentaire,x.missingSignal?"Oui":"Non",x.part,x.reform&&!x.closed?"Oui":"Non", x.ramEntry?x.ramEntry.motif:""]));
+  };
+}
+
+/* =========================================================================
+   IMPORT HANDLING
+   ========================================================================= */
+function readWorkbookRows(file, cb){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const wb = XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:false});
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, {defval:""});
+    cb(json);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function setupDrop(dropId, inputId, fnId, onFile){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const fn = document.getElementById(fnId);
+  drop.addEventListener("dragover", e=>e.preventDefault());
+  drop.addEventListener("drop", e=>{
+    e.preventDefault();
+    if(e.dataTransfer.files.length){ input.files = e.dataTransfer.files; input.dispatchEvent(new Event("change")); }
+  });
+  input.addEventListener("change", ()=>{
+    const file = input.files[0];
+    if(!file) return;
+    fn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span>${escapeHtml(file.name)}</span>`;
+    drop.classList.add("has-file");
+    onFile(file);
+  });
+}
+
+function setupDropMulti(dropId, inputId, fnId, onFiles){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const fn = document.getElementById(fnId);
+  drop.addEventListener("dragover", e=>e.preventDefault());
+  drop.addEventListener("drop", e=>{
+    e.preventDefault();
+    if(e.dataTransfer.files.length){ input.files = e.dataTransfer.files; input.dispatchEvent(new Event("change")); }
+  });
+  input.addEventListener("change", ()=>{
+    const files = Array.from(input.files || []);
+    if(!files.length) return;
+    fn.innerHTML = files.length === 1
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span>${escapeHtml(files[0].name)}</span>`
+      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span>${files.length} fichiers</span>`;
+    drop.classList.add("has-file");
+    onFiles(files);
+  });
+}
+
+setupDropMulti("drop-corretifs","file-corretifs","fn-corretifs", files=>{
+  let pending = files.length, merged = [];
+  files.forEach(file=>{
+    const unit = detectRamUnit(file.name);
+    readWorkbookRows(file, rows=>{
+      rows.forEach(r => r.__unit = unit);
+      merged = merged.concat(rows);
+      pending--;
+      if(pending===0){
+        RAW_CORRECTIFS = merged;
+        SOURCE_LABEL = "Import personnalisé (Correctifs : "+files.map(f=>f.name).join(", ")+")";
+        runAnalysis();
+      }
+    });
+  });
+});
+setupDropMulti("drop-preventifs","file-preventifs","fn-preventifs", files=>{
+  let pending = files.length, merged = [];
+  files.forEach(file=>{
+    const unit = detectRamUnit(file.name);
+    readWorkbookRows(file, rows=>{
+      rows.forEach(r => r.__unit = unit);
+      merged = merged.concat(rows);
+      pending--;
+      if(pending===0){
+        RAW_PREVENTIFS = merged;
+        SOURCE_LABEL = "Import personnalisé (Préventifs : "+files.map(f=>f.name).join(", ")+")";
+        runAnalysis();
+      }
+    });
+  });
+});
+/* =========================================================================
+   EXTRACTION DES GRAPHIQUES NATIFS WORD (word/charts/chartN.xml)
+   Mammoth ne convertit que le texte/tableaux du .docx : les graphiques Word
+   natifs (objets OOXML, pas des images) lui sont invisibles. On relit donc
+   le .docx comme une archive ZIP (JSZip) et on parse directement le XML des
+   graphiques pour retrouver les séries "M(A-1)" / "M(A)" par système ou par
+   mois, exactement comme Word les affiche.
+   ========================================================================= */
+function parseChartXml(xmlText){
+  const titleMatch = xmlText.match(/<c:title>[\s\S]*?<\/c:title>/);
+  const title = titleMatch
+    ? [...titleMatch[0].matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m=>m[1]).join("")
+    : "";
+  const catBlock = xmlText.match(/<c:cat>[\s\S]*?<\/c:cat>/);
+  let categories = [];
+  if(catBlock){
+    categories = [...catBlock[0].matchAll(/<c:pt idx="(\d+)">\s*<c:v>([^<]*)<\/c:v>/g)]
+      .sort((a,b)=>(+a[1])-(+b[1])).map(m=>m[2].trim());
+  }
+  const valBlocks = [...xmlText.matchAll(/<c:val>[\s\S]*?<\/c:val>/g)];
+  const series = valBlocks.map(vb=>{
+    const pts = [...vb[0].matchAll(/<c:pt idx="(\d+)">\s*<c:v>([^<]*)<\/c:v>/g)]
+      .sort((a,b)=>(+a[1])-(+b[1]));
+    const maxIdx = pts.length ? Math.max(...pts.map(p=>+p[1])) : -1;
+    const values = new Array(maxIdx+1).fill(null);
+    pts.forEach(p=>{ values[+p[1]] = parseFloat(p[2]); });
+    return {categories, values};
+  });
+  return {title, series};
+}
+function classifyChartTitle(title){
+  const t = (title||"").toLowerCase();
+  const perSys = /par\s*syst[eè]me/.test(t);
+  if(/pr[eé]ventive/.test(t)) return perSys ? "tmp_par_systeme" : "tmp_global";
+  if(/corrective/.test(t)) return perSys ? "tmc_par_systeme" : "tmc_global";
+  if(/disponibilit[eé]/.test(t)) return perSys ? "dispo_par_systeme" : "dispo_global";
+  return null;
+}
+async function extractChartsFromDocx(arrayBuffer){
+  const charts = {};
+  try{
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const chartFiles = Object.keys(zip.files).filter(n=>/^word\/charts\/chart\d+\.xml$/.test(n));
+    for(const name of chartFiles){
+      const xmlText = await zip.files[name].async("string");
+      const {title, series} = parseChartXml(xmlText);
+      const key = classifyChartTitle(title);
+      if(key && series.length && series[0].categories.length){
+        // Si plusieurs graphiques matchent la même clé (rare), on garde celui
+        // qui a le plus de séries exploitables.
+        if(!charts[key] || series.length > charts[key].series.length){
+          charts[key] = {title, series};
+        }
+      }
+    }
+  }catch(err){
+    console.warn("Extraction des graphiques Word impossible :", err);
+  }
+  return charts;
+}
+
+function pivotIndicateursRam(rows){
+  const header = rows[0].map(h=>(h||"").toLowerCase());
+  const nCols = header.length;
+  const idxName = header.findIndex(h=>/indicateur/.test(h));
+  const idxObj = header.findIndex(h=>/objectif/.test(h));
+  const idxPer = header.findIndex(h=>/p[ée]riode/.test(h));
+  const idxRes = header.findIndex(h=>/r[ée]sultat/.test(h));
+  const order = [], map = {};
+  let lastName = null, lastObjectif = "";
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || !r.length) continue;
+    // Les cellules "Indicateurs"/"Objectif" sont fusionnées verticalement sur 3
+    // lignes (M A-1 / M A / Ecart). Mammoth NE LAISSE PAS de cellule vide pour
+    // une cellule fusionnée : il l'omet purement et simplement, donc les lignes
+    // "M A" / "Ecart" n'ont que 2 cellules au lieu de 4, décalées vers la
+    // droite. On réaligne sur les dernières colonnes de l'en-tête et on
+    // reporte le nom/objectif depuis la dernière ligne complète.
+    let name, objectif, per, res;
+    if(r.length >= nCols){
+      name = (r[idxName]||"").trim();
+      objectif = idxObj>=0 ? (r[idxObj]||"") : "";
+      per = idxPer>=0 ? (r[idxPer]||"") : "";
+      res = idxRes>=0 ? (r[idxRes]||"") : "";
+    } else {
+      const offset = nCols - r.length;
+      const perI = idxPer - offset, resI = idxRes - offset;
+      name = lastName;
+      objectif = lastObjectif;
+      per = perI>=0 ? (r[perI]||"") : "";
+      res = resI>=0 ? (r[resI]||"") : "";
+    }
+    if(!name) continue;
+    lastName = name; lastObjectif = objectif;
+    if(!map[name]){ map[name] = {indicateur:name, objectif, m_a1:"", m_a:"", ecart:""}; order.push(name); }
+    const perL = (per||"").toLowerCase();
+    if(/a-1/.test(perL)) map[name].m_a1 = res;
+    else if(/[ée]cart/.test(perL)) map[name].ecart = res;
+    else map[name].m_a = res;
+  }
+  return order.map(n=>map[n]);
+}
+
+setupDrop("drop-ram","file-ram","fn-ram", file=>{
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const arrayBuffer = e.target.result;
+    Promise.all([
+      mammoth.convertToHtml({arrayBuffer}),
+      extractChartsFromDocx(arrayBuffer)
+    ]).then(([result, charts])=>{
+      const doc = new DOMParser().parseFromString(result.value, "text/html");
+      const tables = [...doc.querySelectorAll("table")].map(t=>{
+        return [...t.querySelectorAll("tr")].map(tr=>[...tr.querySelectorAll("td,th")].map(td=>td.textContent.trim()));
+      });
+      const ram = {
+        bt_preventifs_non_clotures: [], di_correctives_non_cloturees: [], di_annulees: [],
+        tmp_par_systeme_table: [], tmc_par_systeme_table: [], dispo_par_systeme_table: [],
+        top_pannes_MR: [], pannes_par_systeme: [], rames_immobilisees: [], indicateurs_cles: [],
+        charts: charts
+      };
+      tables.forEach(rows=>{
+        if(!rows.length || !rows[0]) return;
+        const h0 = rows[0].join(" ").toLowerCase();
+        const h1 = rows.length>1 ? (rows[0].join(" ")+" "+rows[1].join(" ")).toLowerCase() : h0;
+
+        // Indicateurs clés (Indicateurs / Objectif / Période / Résultat)
+        if(/indicateur/.test(h0) && /objectif/.test(h0) && /p[ée]riode/.test(h0) && /r[ée]sultat/.test(h0)){
+          ram.indicateurs_cles = pivotIndicateursRam(rows); return;
+        }
+        // Rames immobilisées
+        if(/rame/.test(h0) && /immobilisation/.test(h0)){
+          ram.rames_immobilisees = rows; return;
+        }
+        // BT préventifs non clôturés
+        if(/r[ée]f\s*bt/.test(h0) && /motif/.test(h0)){
+          ram.bt_preventifs_non_clotures = rows; return;
+        }
+        // DI annulées (avant DI correctives : motif d'annulation distinct)
+        if(/r[ée]f\s*di/.test(h0) && /annulation/.test(h0)){
+          ram.di_annulees = rows; return;
+        }
+        // DI correctives non clôturées
+        if(/r[ée]f\s*di/.test(h0) && /motif/.test(h0)){
+          ram.di_correctives_non_cloturees = rows; return;
+        }
+        // Pannes récurrentes Matériel Roulant (pas de colonne Système)
+        if(/pannes?\s*signal/.test(h0) && /nombre/.test(h0) && !/syst[èe]me/.test(h0)){
+          ram.top_pannes_MR = rows; return;
+        }
+        // Pannes récurrentes par système (Infrastructures)
+        if(/pannes?\s*signal/.test(h0) && /syst[èe]me/.test(h0)){
+          ram.pannes_par_systeme = rows; return;
+        }
+        // Tableaux §4.1.1.x : deux lignes d'en-tête ("Résultats" fusionné + libellés réels)
+        if(rows.length>2 && /taux\/système/.test(h1)){
+          if(/bt\s*pr[ée]vus/.test(h1)) { ram.tmp_par_systeme_table = rows.slice(1); return; }
+          if(/di\s*cr[ée]e/.test(h1)) { ram.tmc_par_systeme_table = rows.slice(1); return; }
+          ram.dispo_par_systeme_table = rows.slice(1); return;
+        }
+      });
+      // fallback: keep all tables for the generic code-scan safety net
+      ram._all_tables_fallback = tables;
+      RAM_TABLES = ram;
+      SOURCE_LABEL = "Import personnalisé (RAM : "+file.name+")";
+      runAnalysis();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+/* =========================================================================
+   CENTRE D'IMPORT — rechargement automatique des fichiers déjà importés
+   une fois pour toute l'application (voir import-fichiers.html)
+   ========================================================================= */
+const IMPORT_DB_NAME = "setram-import-hub";
+const IMPORT_STORE = "slots";
+function importDbOpen(){
+  return new Promise((res, rej)=>{
+    const req = indexedDB.open(IMPORT_DB_NAME, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(IMPORT_STORE);
+    req.onsuccess = ()=> res(req.result);
+    req.onerror = ()=> rej(req.error);
+  });
+}
+async function importSlotGet(slotId){
+  const db = await importDbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(IMPORT_STORE, "readonly");
+    const r = tx.objectStore(IMPORT_STORE).get(slotId);
+    r.onsuccess = ()=>res(r.result || null); r.onerror = ()=>rej(r.error);
+  });
+}
+async function autoLoadImportSlot(slotId, inputEl){
+  try{
+    const packed = await importSlotGet(slotId);
+    if (!packed || !packed.files || !packed.files.length) return 0;
+    const files = packed.files.map(p => new File([p.data], p.name, {type:p.type, lastModified:p.lastModified}));
+    const dt = new DataTransfer();
+    files.forEach(f=>dt.items.add(f));
+    inputEl.files = dt.files;
+    inputEl.dispatchEvent(new Event('change', {bubbles:true}));
+    return files.length;
+  }catch(e){ console.error("Centre d'Import : échec du chargement automatique pour", slotId, e); return 0; }
+}
+(async function autoLoadFromImportCenter(){
+  await autoLoadImportSlot('corrective', document.getElementById('file-corretifs'));
+  await autoLoadImportSlot('preventif', document.getElementById('file-preventifs'));
+  await autoLoadImportSlot('ram-audit', document.getElementById('file-ram'));
+})();
+
+document.getElementById("btn-reset-default").addEventListener("click", ()=>{
+  RAW_CORRECTIFS = DEFAULT_CORRECTIFS;
+  RAW_PREVENTIFS = DEFAULT_PREVENTIFS;
+  RAM_TABLES = DEFAULT_RAM;
+  SOURCE_LABEL = DEFAULT_LABEL;
+  ["fn-corretifs","fn-preventifs","fn-ram"].forEach(id=>document.getElementById(id).textContent="");
+  ["drop-corretifs","drop-preventifs","drop-ram"].forEach(id=>document.getElementById(id).classList.remove("has-file"));
+  runAnalysis();
+});
+
+document.getElementById("btn-export-all").addEventListener("click", ()=>{
+  const rows = [];
+  computePiecesConsolidation().filter(g=>!g.ramDa).forEach(g=>{
+    rows.push(["Pièce/DA à lancer", g.sys, g.label, g.count, g.codes.join(" | "), "", ""]);
+  });
+  [...CORRECTIFS, ...PREVENTIFS].filter(x=>!x.closed && x.reform).forEach(x=>{
+    rows.push(["Motif à reformuler", x.sys, x.code, "", x.commentaire, REFORM_STORE[x.code]||"", ""]);
+  });
+  [...CORRECTIFS, ...PREVENTIFS].filter(x=>!x.closed && !x.ramEntry).forEach(x=>{
+    rows.push(["Écart RAM (absent du rapport)", x.sys, x.code, "", x.titre, "", x.etat_bt||x.etat_di]);
+  });
+  downloadCsv("export_consolide_audit.csv",
+    ["Catégorie","Système","Code / Libellé","Nb concernés","Détail / Commentaire","Motif reformulé","État"],
+    rows);
+});
+
+/* =========================================================================
+   SYNTHESE AUTOMATIQUE — rédaction générée depuis GMAO + RAM importés
+   ========================================================================= */
+function synPct(n){ return (n===null||n===undefined||isNaN(n)) ? "—" : n.toFixed(2).replace(".",",")+"%"; }
+function synRows(rows){ return (rows||[]).filter(r=> r && r.length && r[0] && !/nombre\s*total/i.test(r[0])); }
+function synGroupCount(rows){
+  const g = {};
+  rows.forEach(r=>{ const s = r[0]||"?"; g[s] = (g[s]||0)+1; });
+  return g;
+}
+function synEcartClass(ecartStr){
+  const v = pctToNum(ecartStr);
+  if(v===null) return "muted";
+  if(v < -0.01) return "red";
+  if(v > 0.01) return "teal";
+  return "muted";
+}
+function synTable(headers, rows){
+  const thead = "<tr>"+headers.map(h=>`<th>${h}</th>`).join("")+"</tr>";
+  const tbody = rows.map(r=>"<tr>"+r.map(v=>`<td>${v===undefined||v===null||v===""?"—":v}</td>`).join("")+"</tr>").join("");
+  return `<div class="tbl-wrap" style="margin-bottom:16px;"><table class="data"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+}
+
+function renderSynthese(){
+  const gmao = computeGmaoRates();
+  const ram = RAM_TABLES || {};
+  const ind = ram.indicateurs_cles || [];
+  const tmpTable = ram.tmp_par_systeme_table || [];
+  const tmcTable = ram.tmc_par_systeme_table || [];
+  const dispoTable = ram.dispo_par_systeme_table || [];
+  const pannesMR = ram.top_pannes_MR || [];
+  const pannesSys = ram.pannes_par_systeme || [];
+  const rames = ram.rames_immobilisees || [];
+  const btNC = synRows(ram.bt_preventifs_non_clotures);
+  const diNC = synRows(ram.di_correctives_non_cloturees);
+  const diAnn = synRows(ram.di_annulees);
+
+  document.getElementById("syn-periode").textContent = SOURCE_LABEL || "—";
+
+  const totalCorr = CORRECTIFS.length, totalPrev = PREVENTIFS.length;
+  const corrAttente = CORRECTIFS.filter(x=>x.etat_bt==="Attente Pièce").length;
+  const prevAttente = PREVENTIFS.filter(x=>x.etat_bt==="Attente Pièce").length;
+
+  let html = "";
+
+  // ---- Introduction ----
+  html += `<div class="panel">
+    <div class="section-title" style="margin-top:0;font-size:17px;">Introduction</div>
+    <p>Cette synthèse est générée automatiquement à partir des données GMAO importées (${totalCorr} demandes d'intervention / bons de travail correctifs et ${totalPrev} bons de travail préventifs) et du rapport RAM chargé (« ${SOURCE_LABEL||"données par défaut"} »). Elle rapproche les indicateurs communiqués dans le RAM avec les données brutes GMAO, compare le mois courant M(A) au mois précédent M(A-1), et met en évidence les pannes récurrentes, les rames immobilisées et les travaux en attente.</p>
+  </div>`;
+
+  // ---- Indicateurs clés ----
+  if(ind.length){
+    html += `<div class="section-title" style="font-size:17px;">Indicateurs clés — M(A-1) vs M(A)</div>`;
+    html += synTable(["Indicateur","Objectif","M(A-1)","M(A)","Écart"],
+      ind.map(k=>[k.indicateur, k.objectif, k.m_a1, k.m_a,
+        `<span class="badge ${synEcartClass(k.ecart)==='red'?'bad':(synEcartClass(k.ecart)==='teal'?'ok':'muted')}">${k.ecart||"—"}</span>`]));
+    const negatifs = ind.filter(k=> pctToNum(k.ecart)!==null && pctToNum(k.ecart) < -0.01);
+    if(negatifs.length){
+      html += `<p class="small">Indicateur(s) en écart négatif par rapport au mois précédent : ${negatifs.map(k=>`<b>${k.indicateur}</b> (${k.ecart})`).join(", ")}.</p>`;
+    } else {
+      html += `<p class="small">Aucun indicateur en écart négatif significatif n'a été détecté ce mois-ci par rapport au mois précédent.</p>`;
+    }
+  }
+
+  // ---- TMP ----
+  if(tmpTable.length){
+    html += `<div class="section-title" style="font-size:17px;">Maintenance préventive — comparaison RAM ↔ GMAO par système</div>`;
+    const rows = tmpTable.map(r=>{
+      const sys = r[0];
+      const gVal = gmao.tmpSys ? gmao.tmpSys[sys] : null;
+      const ecart = (gVal!==null && gVal!==undefined && pctToNum(r[4])!==null) ? (gVal - pctToNum(r[4])) : null;
+      return [sys, r[1], r[2], r[3], r[4], gVal!==null&&gVal!==undefined?synPct(gVal):"—",
+        ecart!==null ? `<span class="badge ${Math.abs(ecart)>2?'bad':'ok'}">${(ecart>=0?"+":"")+ecart.toFixed(2)} pt</span>` : "—"];
+    });
+    html += synTable(["Système","Taux M(A-1)","BT prévus (RAM)","BT soldés (RAM)","Taux M(A) (RAM)","Taux recalculé (GMAO)","Écart RAM/GMAO"], rows);
+    const worstTmp = tmpTable.slice().sort((a,b)=>(pctToNum(a[4])??100)-(pctToNum(b[4])??100))[0];
+    if(worstTmp) html += `<p class="small">Le système le moins bien réalisé en préventif ce mois-ci est <b>${worstTmp[0]}</b> (${worstTmp[4]}, contre ${worstTmp[2]} BT prévus pour ${worstTmp[3]} soldés).</p>`;
+  }
+
+  // ---- TMC ----
+  if(tmcTable.length){
+    html += `<div class="section-title" style="font-size:17px;">Maintenance corrective — comparaison RAM ↔ GMAO par système</div>`;
+    const rows = tmcTable.map(r=>{
+      const sys = r[0];
+      const gVal = gmao.tmcSys ? gmao.tmcSys[sys] : null;
+      const ecart = (gVal!==null && gVal!==undefined && pctToNum(r[4])!==null) ? (gVal - pctToNum(r[4])) : null;
+      return [sys, r[1], r[2], r[3], r[4], gVal!==null&&gVal!==undefined?synPct(gVal):"—",
+        ecart!==null ? `<span class="badge ${Math.abs(ecart)>2?'bad':'ok'}">${(ecart>=0?"+":"")+ecart.toFixed(2)} pt</span>` : "—"];
+    });
+    html += synTable(["Système","Taux M(A-1)","DI créées (RAM)","DI traitées (RAM)","Taux M(A) (RAM)","Taux recalculé (GMAO)","Écart RAM/GMAO"], rows);
+    const worstTmc = tmcTable.slice().sort((a,b)=>(pctToNum(a[4])??100)-(pctToNum(b[4])??100))[0];
+    if(worstTmc) html += `<p class="small">Le système le plus en difficulté en correctif ce mois-ci est <b>${worstTmc[0]}</b> (${worstTmc[4]}, contre ${worstTmc[1]} le mois précédent).</p>`;
+  }
+
+  // ---- Disponibilité (si présente) ----
+  if(dispoTable.length){
+    html += `<div class="section-title" style="font-size:17px;">Disponibilité des équipements par système</div>`;
+    html += synTable(["Système","Taux M(A-1)","Taux M(A)"], dispoTable.map(r=>[r[0],r[1],r[2]]));
+  }
+
+  // ---- Répartition GMAO par système ----
+  const corrBySys = {}, prevBySys = {};
+  CORRECTIFS.forEach(x=> corrBySys[x.sys]=(corrBySys[x.sys]||0)+1);
+  PREVENTIFS.forEach(x=> prevBySys[x.sys]=(prevBySys[x.sys]||0)+1);
+  const allSys = [...new Set([...Object.keys(corrBySys), ...Object.keys(prevBySys)])];
+  if(allSys.length){
+    html += `<div class="section-title" style="font-size:17px;">Répartition des interventions GMAO par système</div>`;
+    html += synTable(["Système","Correctif","Préventif","Total"], allSys.map(s=>[s, corrBySys[s]||0, prevBySys[s]||0, (corrBySys[s]||0)+(prevBySys[s]||0)]));
+  }
+
+  // ---- Pannes récurrentes (matériel roulant) ----
+  if(pannesMR.length>1){
+    html += `<div class="section-title" style="font-size:17px;">Pannes récurrentes — Matériel Roulant</div>`;
+    html += synTable(pannesMR[0].slice(0,4), pannesMR.slice(1).filter(r=>r[0]&&r[0]!=="/").map(r=>r.slice(0,4)));
+  }
+  if(pannesSys.length>1){
+    html += `<div class="section-title" style="font-size:17px;">Pannes récurrentes — par système (Infrastructures)</div>`;
+    html += synTable(pannesSys[0].slice(0,5), pannesSys.slice(1).filter(r=>r[1]&&r[1]!=="/").map(r=>r.slice(0,5)));
+  }
+
+  // ---- Rames immobilisées ----
+  if(rames.length>1){
+    html += `<div class="section-title" style="font-size:17px;">Matériel roulant — rames immobilisées</div>`;
+    html += synTable(["N° Rame","Date immob.","Raison","Durée (j)","Action engagée"], rames.slice(1).map(r=>[r[0],r[1],r[2],r[3],r[4]]));
+  }
+
+  // ---- Travaux en attente ----
+  html += `<div class="section-title" style="font-size:17px;">Travaux en attente (pièces de rechange / diagnostics)</div>`;
+  html += `<p class="small">${btNC.length} bon(s) de travail préventif(s) et ${diNC.length} demande(s) d'intervention corrective(s) restent non clôturés selon le RAM, en plus de ${corrAttente} bon(s) de travail correctifs et ${prevAttente} bon(s) de travail préventifs marqués « Attente Pièce » dans la GMAO.</p>`;
+  if(btNC.length){
+    const g = synGroupCount(btNC);
+    html += `<p class="small"><b>BT préventifs non clôturés par système :</b> ${Object.entries(g).map(([s,n])=>`${s} (${n})`).join(", ")}</p>`;
+  }
+  if(diNC.length){
+    const g = synGroupCount(diNC);
+    html += `<p class="small"><b>DI correctives non clôturées par système :</b> ${Object.entries(g).map(([s,n])=>`${s} (${n})`).join(", ")}</p>`;
+    const safety = diNC.filter(r=> /oui/i.test(r[2]||""));
+    if(safety.length) html += `<p class="small"><span class="badge bad">Impact sécurité</span> ${safety.length} demande(s) d'intervention à impact sécurité restent non clôturées : ${safety.map(r=>r[1]).join(" ; ")}</p>`;
+  }
+
+  // ---- DI annulées ----
+  if(diAnn.length){
+    html += `<div class="section-title" style="font-size:17px;">Qualité des données — DI annulées</div>`;
+    const g = synGroupCount(diAnn);
+    html += `<p class="small">${diAnn.length} demande(s) d'intervention ont été annulées sur la période. Répartition par système : ${Object.entries(g).map(([s,n])=>`${s} (${n})`).join(", ")}.</p>`;
+  }
+
+  // ---- Conclusion / recommandations (générées) ----
+  const recos = [];
+  if(tmcTable.length){
+    const worst = tmcTable.slice().sort((a,b)=>(pctToNum(a[4])??100)-(pctToNum(b[4])??100))[0];
+    if(worst && pctToNum(worst[4])!==null && pctToNum(worst[4])<95) recos.push(`Sécuriser l'approvisionnement en pièces de rechange pour le système <b>${worst[0]}</b>, dont le taux de maintenance corrective (${worst[4]}) est le plus en retrait ce mois-ci.`);
+  }
+  const safetyAll = diNC.filter(r=> /oui/i.test(r[2]||""));
+  if(safetyAll.length) recos.push(`Traiter en priorité les ${safetyAll.length} demande(s) d'intervention à impact sécurité toujours ouvertes.`);
+  if(rames.length>1){
+    const longues = rames.slice(1).filter(r=> parseFloat((r[3]||"0").replace(",","."))>30);
+    if(longues.length) recos.push(`Fiabiliser le suivi des rames immobilisées de longue durée : ${longues.map(r=>r[0]).join(", ")}.`);
+  }
+  if(diAnn.length>10) recos.push(`Renforcer la fiabilité de la saisie des demandes d'intervention afin de réduire le nombre de DI annulées (${diAnn.length} ce mois-ci), notamment pour double signalement.`);
+  if(!recos.length) recos.push("Aucun point bloquant majeur identifié automatiquement ce mois-ci ; poursuivre le suivi habituel des indicateurs.");
+
+  html += `<div class="section-title" style="font-size:17px;">Conclusion et recommandations</div>
+    <div class="panel"><ul class="small" style="margin:0;padding-left:18px;line-height:1.9;">${recos.map(r=>`<li>${r}</li>`).join("")}</ul></div>`;
+
+  document.getElementById("synthese-content").innerHTML = html;
+}
+
+function buildSyntheseDocHtml(){
+  const content = document.getElementById("synthese-content").innerHTML;
+  const periode = document.getElementById("syn-periode").textContent;
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8"><title>Synthèse Audit Maintenance</title>
+  <style>
+    body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#111;}
+    h1{font-size:20pt;color:#1F3864;} .section-title{font-size:14pt;color:#2E74B5;font-weight:bold;margin-top:18pt;}
+    table{border-collapse:collapse;width:100%;margin-bottom:12pt;} td,th{border:1px solid #999;padding:4pt 6pt;font-size:10pt;text-align:left;}
+    th{background:#1F3864;color:#fff;} .badge{padding:1pt 5pt;border-radius:8pt;font-size:9pt;} .panel{border:1px solid #ccc;padding:8pt;margin-bottom:10pt;}
+  </style></head>
+  <body>
+    <h1>SETRAM — Rapport de synthèse Audit Maintenance${currentUnitLabel()?(" — "+currentUnitLabel()):""}</h1>
+    <p><i>Période : ${periode}</i></p>
+    ${content}
+  </body></html>`;
+}
+function exportSyntheseDoc(){
+  const htmlDoc = buildSyntheseDocHtml();
+  const blob = new Blob(['\ufeff', htmlDoc], {type:"application/msword"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const unitSlug = currentUnitLabel().replace(/[^\w]+/g,"_").replace(/^_|_$/g,"");
+  a.download = "Synthese_Audit_Maintenance" + (unitSlug?("_"+unitSlug):"") + ".doc";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById("btn-syn-export").addEventListener("click", exportSyntheseDoc);
+document.getElementById("btn-syn-print").addEventListener("click", ()=>{
+  const w = window.open("", "_blank");
+  w.document.write(buildSyntheseDocHtml());
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(), 300);
+});
+
+/* =========================================================================
+   UNITE OPERATIONNELLE — filtre réel : ne montre que les DI/BT de l'unité
+   sélectionnée (Alger, Oran, Sidi Bel Abbès, Constantine, Sétif, Ouargla,
+   Mostaganem), détectée depuis le nom des fichiers importés.
+   ========================================================================= */
+const RAM_UNIT_LABELS = {ALG:"Alger (ALG)", ORN:"Oran (ORN)", SBA:"Sidi Bel Abbès (SBA)", CST:"Constantine (CST)", STF:"Sétif (STF)", ORG:"Ouargla (ORG)", MGM:"Mostaganem (MGM)"};
+function detectRamUnit(filename){
+  const name = (filename||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const u of Object.keys(RAM_UNIT_LABELS)) { if (name.includes(u.toLowerCase())) return u; }
+  return null;
+}
+const unitInput = document.getElementById("unit-select");
+function applyUnitLabel(){
+  const v = SELECTED_UNIT;
+  document.getElementById("brandUnit").textContent = v ? "— " + (RAM_UNIT_LABELS[v]||v) : "";
+  document.title = "SETRAM · Audit Maintenance GMAO" + (v ? " — " + (RAM_UNIT_LABELS[v]||v) : "");
+}
+try{ unitInput.value = localStorage.getItem("gmao_unit_filter") || ""; }catch(e){}
+SELECTED_UNIT = unitInput.value || "";
+applyUnitLabel();
+unitInput.addEventListener("change", ()=>{
+  SELECTED_UNIT = unitInput.value || "";
+  applyUnitLabel();
+  try{ localStorage.setItem("gmao_unit_filter", SELECTED_UNIT); }catch(e){}
+  runAnalysis();
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+runAnalysis();
+</script>
+</body>
+</html>

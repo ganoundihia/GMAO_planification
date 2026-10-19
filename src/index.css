@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   SETRAM design tokens — shared across Home, Ingénierie, Documents,
+   Planification. See project_setram design plan (Phase 1) for rationale.
+   Changing a value here changes it everywhere; do not hardcode hexes in
+   components — use these Tailwind theme colors / CSS variables instead.
+   ========================================================================== */
+@theme {
+  --color-navy: #0a1930; /* Caténaire Navy — nav/hero base */
+  --color-steel: #2f6690; /* Rail Steel — primary accent */
+  --color-steel-dark: #24537a;
+  --color-amber: #f0b429; /* Signal Amber — the one interactive accent */
+  --color-copper: #b5652d; /* Catenary Copper — utility/data accent */
+  --color-paper: #f7f9fc; /* Platform White — shared background */
+  --color-panel: #ffffff;
+  --color-line: #e2e8f4;
+  --color-ink: #0a1930; /* body text */
+  --color-ink-muted: #44537a;
+  --color-fault: #d6455a; /* status: error/red */
+  --color-fault-soft: #fbe9ec;
+  --color-clear: #1f9d6f; /* status: success/green */
+  --color-clear-soft: #e2f7ee;
+  --color-caution: #f0b429; /* status: warning/amber, same as Signal Amber */
+  --color-caution-soft: #fdf1e2;
+
+  --font-display: 'Space Grotesk', 'Segoe UI Semibold', 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+  .font-data {
+    font-family: var(--font-mono);
+  }
+}
+
+/* ==========================================================================
+   AMBIENT BACKGROUND — the site's shared "alive" background, sourced from
+   Suivi des Performances (chosen as the reference by SETRAM) and applied
+   everywhere: slow-drifting blurred gradient blobs behind the content.
+   transform/opacity only, so it's cheap to animate. Respects
+   prefers-reduced-motion (freezes in place instead of stopping the whole
+   page's motion sense — the blobs are just ambient decoration, not
+   functional). Used via the <AmbientBackground /> component on the React
+   side (src/components/shell/AmbientBackground.tsx); the identical class
+   names/keyframes are duplicated into each legacy HTML page's <style> so
+   both sides render the exact same motif.
+   ========================================================================== */
+.bg-balls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.ball {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  will-change: transform;
+}
+.ball-1 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);
+  top: -120px; left: 100px;
+  animation: blob-drift-1 28s ease-in-out infinite;
+}
+.ball-2 {
+  width: 320px; height: 320px;
+  background: radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);
+  top: 20%; right: -80px;
+  animation: blob-drift-2 34s ease-in-out infinite;
+}
+.ball-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);
+  bottom: 10%; left: 8%;
+  animation: blob-drift-3 38s ease-in-out infinite;
+}
+.ball-4 {
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);
+  top: 52%; right: 25%;
+  animation: blob-drift-4 30s ease-in-out infinite;
+}
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0,0) scale(1) rotate(0deg); }
+  25%      { transform: translate(60px,80px) scale(1.08) rotate(3deg); }
+  50%      { transform: translate(-30px,120px) scale(.96) rotate(-2deg); }
+  75%      { transform: translate(80px,40px) scale(1.05) rotate(1deg); }
+}
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33%      { transform: translate(-80px,60px) scale(1.1); }
+  66%      { transform: translate(-50px,100px) scale(.93); }
+}
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0,0) scale(1) rotate(0deg); }
+  40%      { transform: translate(70px,-60px) scale(1.07) rotate(-4deg); }
+  80%      { transform: translate(110px,-90px) scale(.94) rotate(2deg); }
+}
+@keyframes blob-drift-4 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(-60px,50px) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ball { animation: none !important; }
+}
+
+/* Print styles — Fiche d'intervention */
+@media print {
+  /* Hide everything by default */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show print-only content */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Hide the main app layout when printing a fiche */
+  body {
+    background: white !important;
+    font-size: 10pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px 10px;
+    border-bottom: 3px solid #1e3a5f;
+  }
+
+  .print-header h1 {
+    font-size: 18pt;
+    color: #1e3a5f;
+    margin: 0;
+    font-weight: bold;
+  }
+
+  .print-header p {
+    font-size: 10pt;
+    color: #64748b;
+    margin: 4px 0 0;
+  }
+
+  /* Fiche table */
+  .print-only table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  .print-only td {
+    padding: 6px 10px;
+    border: 1px solid #999;
+    vertical-align: top;
+  }
+
+  /* Force color printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

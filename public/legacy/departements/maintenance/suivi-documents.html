@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registre des Documents — Direction de la Maintenance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#0a1930;
+    --ink-soft:#44537a;
+    --paper:#f7f9fc;
+    --paper-raised:#FFFFFF;
+    --line:#e2e8f4;
+    --teal:#2f6690;
+    --teal-dark:#24537a;
+    --amber:#f0b429;
+    --amber-bg:#fdf1e2;
+    --red:#d6455a;
+    --red-bg:#fbe9ec;
+    --green-bg:#e2f7ee;
+    --green:#1f9d6f;
+    --shadow: 0 1px 2px rgba(30,42,99,.06), 0 4px 12px rgba(30,42,99,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter', system-ui, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.45;
+  }
+  code, .mono, .ref-code, input.mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- Layout shell ---------- */
+  #app{ display:grid; grid-template-columns: 280px 1fr; min-height:100vh; }
+  #sidebar{
+    background:var(--ink);
+    color:#DCE6EC;
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  #sidebar .brand{
+    padding:20px 18px 14px 18px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  #sidebar .brand .stamp{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px;height:34px; border:2px solid var(--amber); border-radius:6px;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--amber);
+    transform:rotate(-4deg); margin-bottom:8px; font-size:13px;
+  }
+  #sidebar .brand h1{ font-size:15px; margin:2px 0 2px 0; font-weight:600; letter-spacing:.2px;}
+  #sidebar .brand p{ margin:0; font-size:11.5px; color:#8FA3B3; }
+
+  .side-group{ padding:10px 10px 4px 10px; }
+  .side-group-label{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.09em;
+    color:#7C93A3; padding:10px 8px 6px 8px; font-weight:600;
+  }
+  .cat-btn{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    width:100%; text-align:left; padding:8px 10px; border-radius:7px; border:none;
+    background:transparent; color:#C9D6DE; cursor:pointer; font-size:12.8px;
+    font-family:inherit;
+  }
+  .cat-btn:hover{ background:rgba(255,255,255,.06); color:#fff; }
+  .cat-btn.active{ background:var(--teal); color:#fff; font-weight:600; }
+  .cat-btn .count{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; opacity:.85;
+    background:rgba(255,255,255,.12); padding:1px 6px; border-radius:20px;
+  }
+  .cat-btn.active .count{ background:rgba(255,255,255,.22); }
+
+  #sidebar .foot{ margin-top:auto; padding:14px 16px 18px 16px; border-top:1px solid rgba(255,255,255,.08); font-size:11px; color:#7C93A3; }
+
+  /* ---------- Main ---------- */
+  #main{ padding:26px 34px 60px 34px; max-width:1180px; }
+  .topbar{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:20px;
+    margin-bottom:22px; flex-wrap:wrap;
+  }
+  .topbar h2{ margin:0 0 4px 0; font-size:21px; }
+  .topbar .sub{ color:var(--ink-soft); font-size:12.8px; }
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  button{ font-family:inherit; cursor:pointer; }
+  .btn{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 14px; border-radius:7px; border:1px solid var(--line);
+    background:var(--paper-raised); color:var(--ink); font-size:12.8px; font-weight:500;
+    box-shadow:var(--shadow); transition:transform .05s ease;
+  }
+  .btn:hover{ border-color:var(--teal); color:var(--teal-dark); }
+  .btn:active{ transform:translateY(1px); }
+  .btn-primary{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .btn-primary:hover{ background:var(--teal-dark); border-color:var(--teal-dark); color:#fff; }
+  .btn-ghost{ background:transparent; box-shadow:none; border-color:transparent; color:var(--ink-soft); }
+  .btn-ghost:hover{ background:rgba(31,110,106,.08); color:var(--teal-dark); }
+  .btn-sm{ padding:5px 9px; font-size:11.8px; border-radius:6px; }
+  .btn-danger{ color:var(--red); }
+  .btn-danger:hover{ border-color:var(--red); }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+
+  /* status banner */
+  .banner{ padding:10px 14px; border-radius:8px; font-size:12.6px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .banner.warn{ background:var(--amber-bg); color:#7A551A; border:1px solid #EAD6AC; }
+  .banner.ok{ background:var(--green-bg); color:var(--green); border:1px solid #C6E0CE; }
+  .banner.info{ background:#E7EEF3; color:var(--ink-soft); border:1px solid var(--line); }
+
+  /* dashboard cards */
+  .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:22px; }
+  .card{ background:var(--paper-raised); border:1px solid var(--line); border-radius:10px; padding:14px 16px; box-shadow:var(--shadow); }
+  .card .num{ font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; }
+  .card .lbl{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .card.accent-amber .num{ color:var(--amber); }
+  .card.accent-red .num{ color:var(--red); }
+  .card.accent-teal .num{ color:var(--teal); }
+
+  /* filters */
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+  .filters input[type=text], .filters select{
+    padding:7px 10px; border:1px solid var(--line); border-radius:7px; font-size:12.8px; background:#fff; color:var(--ink);
+  }
+  .filters input[type=text]{ min-width:220px; }
+
+  /* table */
+  table{ width:100%; border-collapse:collapse; background:var(--paper-raised); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); }
+  thead th{
+    text-align:left; font-size:10.8px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft); padding:10px 12px; border-bottom:1px solid var(--line); background:#F8FAFB;
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  thead th:hover{ color:var(--teal-dark); }
+  tbody td{ padding:9px 12px; border-bottom:1px solid var(--line); font-size:12.6px; vertical-align:top; }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:#FAFBFC; }
+  td.ref{ font-family:'IBM Plex Mono',monospace; font-size:11.8px; color:var(--ink); white-space:nowrap; }
+  td.actions{ white-space:nowrap; text-align:right; }
+  .empty-row td{ text-align:center; padding:34px 12px; color:var(--ink-soft); font-size:13px; }
+
+  .pill{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
+  .pill.state-vigueur{ background:var(--green-bg); color:var(--green); }
+  .pill.state-annulee{ background:#ECECEC; color:#666; }
+  .pill.state-cours{ background:var(--amber-bg); color:var(--amber); }
+  .pill.state-autre{ background:#E7EEF3; color:var(--ink-soft); }
+  .due-soon{ color:var(--red); font-weight:600; }
+
+  /* modal */
+  .overlay{ position:fixed; inset:0; background:rgba(21,42,62,.45); display:none; align-items:flex-start; justify-content:center; padding:5vh 16px; z-index:50; overflow-y:auto;}
+  .overlay.show{ display:flex; }
+  .modal{ background:#fff; border-radius:12px; width:100%; max-width:640px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .modal-head{ padding:18px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .modal-head h3{ margin:0; font-size:16px; }
+  .modal-body{ padding:20px 22px; max-height:64vh; overflow-y:auto; }
+  .modal-foot{ padding:16px 22px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--ink-soft); }
+  .field .req{ color:var(--red); }
+  .field input, .field select, .field textarea{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:7px; font-size:13px; font-family:inherit; background:#fff; color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; border-color:var(--teal); }
+  .field textarea{ min-height:64px; resize:vertical; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field-error{ color:var(--red); font-size:11.5px; margin-top:4px; display:none; }
+  .field.invalid input, .field.invalid select{ border-color:var(--red); }
+  .field.invalid .field-error{ display:block; }
+  .close-x{ border:none; background:none; font-size:20px; color:var(--ink-soft); cursor:pointer; line-height:1;}
+  .hint{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  .employe-locked{ padding:9px 11px; border:1px solid var(--line); border-radius:7px; background:#F8FAFB; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+  .employe-locked a{ font-size:11.5px; color:var(--teal-dark); text-decoration:none; }
+  .employe-locked a:hover{ text-decoration:underline; }
+  .file-current{ font-size:12.5px; margin-top:6px; color:var(--ink); }
+  .file-current a.remove-attach{ color:var(--red); text-decoration:none; margin-left:8px; font-size:11.5px; }
+  .file-current a.remove-attach:hover{ text-decoration:underline; }
+  a.download-attach{ color:var(--teal-dark); text-decoration:none; }
+  a.download-attach:hover{ text-decoration:underline; }
+
+  /* import wizard */
+  .import-step{ display:none; }
+  .import-step.show{ display:block; }
+  .map-row{ display:grid; grid-template-columns:1fr 24px 1fr; gap:10px; align-items:center; margin-bottom:8px; font-size:12.6px; }
+  .map-row .col-name{ font-family:'IBM Plex Mono',monospace; background:#F8FAFB; padding:6px 9px; border-radius:6px; border:1px solid var(--line);}
+  .preview-table{ width:100%; font-size:11px; border-collapse:collapse; margin-top:10px; }
+  .preview-table td, .preview-table th{ border:1px solid var(--line); padding:4px 6px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  ::selection{ background:#BFE0DC; }
+  @media (max-width:820px){
+    #app{ grid-template-columns:1fr; }
+    #sidebar{ position:relative; height:auto; }
+  }
+
+/* ===== Ambient background — shared across the whole site (source: Suivi des Performances) ===== */
+.bg-balls{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ball{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform;}
+.ball-1{width:400px;height:400px;background:radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);top:-120px;left:100px;animation:blob-drift-1 28s ease-in-out infinite;}
+.ball-2{width:320px;height:320px;background:radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);top:20%;right:-80px;animation:blob-drift-2 34s ease-in-out infinite;}
+.ball-3{width:300px;height:300px;background:radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);bottom:10%;left:8%;animation:blob-drift-3 38s ease-in-out infinite;}
+.ball-4{width:280px;height:280px;background:radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);top:52%;right:25%;animation:blob-drift-4 30s ease-in-out infinite;}
+@keyframes blob-drift-1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}25%{transform:translate(60px,80px) scale(1.08) rotate(3deg);}50%{transform:translate(-30px,120px) scale(.96) rotate(-2deg);}75%{transform:translate(80px,40px) scale(1.05) rotate(1deg);}}
+@keyframes blob-drift-2{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(-80px,60px) scale(1.1);}66%{transform:translate(-50px,100px) scale(.93);}}
+@keyframes blob-drift-3{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}40%{transform:translate(70px,-60px) scale(1.07) rotate(-4deg);}80%{transform:translate(110px,-90px) scale(.94) rotate(2deg);}}
+@keyframes blob-drift-4{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,50px) scale(1.12);}}
+@media (prefers-reduced-motion: reduce){.ball{animation:none !important;}}
+/* .bg-balls is position:fixed with z-index:0, which by CSS stacking rules
+   can render ABOVE plain unpositioned content — this forces every other
+   direct child of body to stack above it regardless of the page's own
+   wrapper class names. */
+body > *:not(.bg-balls){position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<div class="bg-balls" aria-hidden="true"><div class="ball ball-1"></div><div class="ball ball-2"></div><div class="ball ball-3"></div><div class="ball ball-4"></div></div>
+
+
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <h1>Registre des Documents</h1>
+      <p>Direction de la Maintenance</p>
+    </div>
+    <div id="sidebarGroups"></div>
+    <div class="foot">
+      Fichier de données : <span id="fileStatusLabel">aucun</span>
+      <div style="margin-top:10px;">
+        <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#7C93A3;margin-bottom:4px;">Employé connecté (ce poste)</div>
+        <select id="currentEmployeSelect" style="width:100%;background:#0F202E;color:#DCE6EC;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 6px;font-size:11.8px;font-family:inherit;">
+          <option value="">— Sélectionner —</option>
+        </select>
+        <div class="hint" style="color:#7C93A3;">Utilisé pour préremplir automatiquement les Autorisations de sortie / d'absence sur ce poste.</div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="topbar">
+      <div>
+        <h2 id="viewTitle">Tableau de bord</h2>
+        <div class="sub" id="viewSub">Vue d'ensemble de tous les registres</div>
+      </div>
+      <div class="toolbar" id="toolbar"></div>
+    </div>
+
+    <div id="bannerZone"></div>
+    <div id="content"></div>
+  </main>
+</div>
+
+<!-- Record modal -->
+<div class="overlay" id="recordOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="recordModalTitle">Ajouter un document</h3>
+      <button class="close-x" onclick="closeRecordModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="recordFormBody"></div>
+    <div class="modal-foot">
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-danger btn-ghost" id="deleteRecordBtn" style="display:none" onclick="deleteCurrentRecord()">Supprimer ce document</button>
+        <button class="btn btn-ghost" id="printRecordBtn" style="display:none" onclick="printRecordFromModal()">🖶 Imprimer</button>
+        <button class="btn btn-ghost" id="wordRecordBtn" style="display:none" onclick="wordRecordFromModal()">📄 Word (.docx)</button>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn" onclick="closeRecordModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitRecordForm()">Enregistrer le document</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import wizard modal -->
+<!-- Bulk import results modal -->
+<div class="overlay" id="bulkResultOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head">
+      <h3>Résultat de l'import automatique</h3>
+      <button class="close-x" onclick="document.getElementById('bulkResultOverlay').classList.remove('show')">&times;</button>
+    </div>
+    <div class="modal-body" id="bulkResultBody"></div>
+    <div class="modal-foot">
+      <div style="margin-left:auto;">
+        <button class="btn btn-primary" onclick="document.getElementById('bulkResultOverlay').classList.remove('show')">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="importOverlay">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head">
+      <h3>Importer depuis un fichier Excel</h3>
+      <button class="close-x" onclick="closeImportModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="import-step show" id="importStep1">
+        <p class="hint">Sélectionnez l'ancien fichier Excel de suivi. Vous choisirez ensuite l'onglet, la ligne d'en-tête, et à quel champ correspond chaque colonne.</p>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls">
+      </div>
+      <div class="import-step" id="importStep2">
+        <div class="field">
+          <label>Onglet (feuille) à importer</label>
+          <select id="importSheetSelect"></select>
+        </div>
+        <div class="field">
+          <label>Registre de destination</label>
+          <select id="importCategorySelect"></select>
+        </div>
+        <div class="field">
+          <label>Ligne contenant les en-têtes de colonnes (numéro de ligne Excel)</label>
+          <input type="number" id="importHeaderRow" min="1" value="1">
+        </div>
+        <button class="btn btn-sm" onclick="loadImportPreview()">Prévisualiser</button>
+        <div id="importPreviewZone"></div>
+      </div>
+      <div class="import-step" id="importStep3">
+        <p class="hint">Faites correspondre chaque colonne du fichier Excel à un champ du registre. Laissez sur « — Ignorer — » si la colonne n'est pas utile.</p>
+        <div id="importMappingZone"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div id="importStepLabel" class="hint"></div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn" id="importBackBtn" onclick="importGoBack()" style="display:none">Retour</button>
+        <button class="btn btn-primary" id="importNextBtn" onclick="importGoNext()" disabled>Suivant</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   CONFIGURATION DES REGISTRES
+   ========================================================================= */
+const FIELD_DEFS = {
+  reference:    { label: "Référence document", type:"text", mono:true },
+  titre:        { label: "Titre du document",  type:"text" },
+  version:      { label: "Version",            type:"text" },
+  etat:         { label: "État",                type:"select" },
+  echeance:     { label: "Échéance",            type:"date" },
+  redacteur:    { label: "Rédacteur / Demandeur", type:"text" },
+  site:         { label: "Site / UO",           type:"select-site" },
+  uo:           { label: "Unité opérationnelle (UO)", type:"select-uo" },
+  systeme:      { label: "Système",             type:"text" },
+  equipement:   { label: "Équipement",          type:"text" },
+  dateCreation: { label: "Date de création",    type:"date" },
+  commentaire:  { label: "Commentaire",         type:"textarea" },
+  employe:      { label: "Employé concerné",     type:"select-employe" },
+  motif:        { label: "Motif",                type:"select-motif" },
+  heureDebut:   { label: "Heure de début",       type:"time" },
+  heureFin:     { label: "Heure de fin",         type:"time" },
+  pieceJointe:  { label: "Pièce jointe",         type:"file" }
+};
+
+const SITES = ["DG","ALG","ORN","CST","STF","SBA","ORG","MGM","UOS"];
+const SITES_UO = ["ALG","ORN","CST","SBA","ORG","STF","MGM"];
+const DEFAULT_ETATS = ["En vigueur","En cours de validation","En cours de signature","En cours de mise à jour","Annulée","Archivée"];
+
+const TEMPLATES = {
+  A: ["reference","titre","dateCreation","redacteur","commentaire"],
+  B: ["reference","version","titre","etat","echeance","redacteur","commentaire"],
+  C: ["reference","titre","site","systeme","equipement","version","dateCreation","etat","redacteur","commentaire"],
+  B_UO: ["reference","version","titre","uo","etat","echeance","redacteur","commentaire"],
+  C_UO: ["reference","titre","uo","systeme","equipement","version","dateCreation","etat","redacteur","commentaire"],
+  RH: ["reference","dateCreation","employe","motif","heureDebut","heureFin"]
+};
+
+// id, label, group, template, fixedSite (optional)
+const CATEGORIES = [
+  { id:"for",          label:"Formulaires (FOR)",                 group:"Documents techniques", template:"B" },
+  { id:"pg",           label:"Procédures Générales (PG)",         group:"Documents techniques", template:"B" },
+  { id:"modg",         label:"Modes Opératoires DG",               group:"Documents techniques", template:"B" },
+  { id:"moc",          label:"MOC",                                 group:"Documents techniques", template:"C" },
+  { id:"mop",          label:"MOP",                                 group:"Documents techniques", template:"C" },
+  { id:"mosysteme",    label:"Modes Opératoires Système",          group:"Modes Opératoires Système", template:"C_UO", attachAccept:".doc,.docx", attachHint:"Pièce jointe : fichier Word (.doc, .docx)" },
+  { id:"pmp",          label:"PMP",                                 group:"PMP — Plan de Maintenance Préventive", template:"B_UO", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"pdc",          label:"PDC",                                 group:"PDC — Plan de Charge", template:"B_UO", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpcst",       label:"FMP — UO Constantine (CST)",         group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"CST", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmporg",       label:"FMP — UO ORG",                       group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"ORG", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpstf",       label:"FMP — UO Sétif (STF)",                group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"STF", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpalg",       label:"FMP — UO Alger (ALG)",                group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"ALG", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmporn",       label:"FMP — UO Oran (ORN)",                 group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"ORN", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpsba",       label:"FMP — UO Sidi Bel Abbès (SBA)",       group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"SBA", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpmgm",       label:"FMP — UO MGM",                       group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"MGM", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"fmpuos",       label:"FMP — Toutes UO (UOS)",               group:"Fiches de Maintenance Préventive", template:"C", fixedSite:"UOS", attachAccept:".xls,.xlsx,.xlsm", attachHint:"Pièce jointe : fichier Excel (.xls, .xlsx)" },
+  { id:"ft",           label:"Fiches Techniques (FT)",              group:"Documents de référence", template:"A" },
+  { id:"ra",           label:"Rapports d'Audit (RA)",               group:"Documents de référence", template:"A" },
+  { id:"dr",           label:"Documents de Référence (DR)",        group:"Documents de référence", template:"A" },
+  { id:"pvmarche",     label:"Réf. PV Marché",                      group:"Documents de référence", template:"A" },
+  { id:"cmsddg",       label:"CMSD DG",                             group:"Documents de référence", template:"A" },
+  { id:"crr",          label:"CRR",                                  group:"Documents de référence", template:"A" },
+  { id:"ce",           label:"Courriers Externes (CE)",             group:"Administratif / RH", template:"A" },
+  { id:"attestation",  label:"Attestation de Service Fait",        group:"Administratif / RH", template:"A" },
+  { id:"conge",        label:"Congés",                              group:"Administratif / RH", template:"A" },
+  { id:"sortie",       label:"Autorisation de Sortie",              group:"Administratif / RH", template:"RH", rhType:"sortie",  rhCode:"DG-DRH-FOR-0075-B" },
+  { id:"absence",      label:"Autorisation d'Absence",              group:"Administratif / RH", template:"RH", rhType:"absence", rhCode:"DG-DRH-FOR-0076-B" },
+  { id:"fnc",          label:"FNC",                                  group:"Administratif / RH", template:"A" },
+  { id:"csc",          label:"CSC",                                  group:"Administratif / RH", template:"A" }
+];
+const CAT_BY_ID = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+const GROUPS = [...new Set(CATEGORIES.map(c=>c.group))];
+
+/* --- Autorisations RH (Sortie / Absence) : les 6 éléments de la Direction de la Maintenance --- */
+const EMPLOYES_DG = [
+  { nom:"Ahlem DJOUHRI",        matricule:"",       fonction:"Responsable Ingénierie de la Maintenance",      direction:"Direction de la Maintenance" },
+  { nom:"Abdelkader NASRI",     matricule:"16",     fonction:"Responsable SDF",                                direction:"Direction de la Maintenance" },
+  { nom:"Zineddine MECHERI",    matricule:"161187", fonction:"Responsable Planification et Ordonnancement",   direction:"Direction de la Maintenance" },
+  { nom:"Billel CHIKH",         matricule:"161229", fonction:"Expert Énergie",                                 direction:"Direction de la Maintenance" },
+  { nom:"Salaheddine SEDDAOUI", matricule:"161284", fonction:"Ingénieur CFA",                                  direction:"Direction de la Maintenance" },
+  { nom:"Brahim BOUNOUA",       matricule:"16",     fonction:"Ingénieur Maintenance",                          direction:"Direction de la Maintenance" }
+];
+const EMPLOYE_BY_NOM = Object.fromEntries(EMPLOYES_DG.map(e=>[e.nom,e]));
+const MOTIFS_RH = ["Personnel","Sortie de service"];
+const RH_SITE_FIXE = "Direction Générale";
+const LETTERHEAD_TOP = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAElBRMDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD7H3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KN0/8Azzj/AO/h/wAKkooAj3T/APPOP/v4f8KKkooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoNFYXirxf4Y8LwGbxBrthpw271SaYCRx/sp95vwBpxi5OyVxXsbnFLXimuftL/DqwuHhs01jVQBxLbWoWMn0/eMjfpXH3P7V8YmYW3gV3iB+VpNUCsR7gRHH5muuGXYme0H+RDqxXU+m6K+YV/axbcN3gMbe+NW/+0102j/tQ+B7ryk1HS9b0+Rzh2ESSxp75DBiPotVPLcVFawBVYPqe796WuT8JfEbwP4qdY9C8S2F1MxwsDOYpmPtG4DH64rrO3WuOUJQdpKxaaewUUUVIwooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK5n4geOfDfgbSTqPiHUEtwwPkwL8005HZF6nqOegyMkVyfx0+L2l/Dmw+yW6R3/iC4Tdb2m75Yh2klxyF9B1bHYZI+LPFGv614p1ybVtcvpb6+nPLv0A7Ko6Ko7AcCvUwGWSxHvz0j+ZjUqqOiPWPiX+0X4t8QyS2fhvPh7TSSoaNt1zIPUv8AwduF5H941574W8D+OvHd09zo+jajqhkdt95KcRFh1Bmchd3I4zmvpj4Ufs5+HtBji1HxeItd1PAbyCD9lhPptP8ArPq3H+z3r3KCKOCFIYY0jiRQqIigBQOgAHQV1TzKjhlyYaPzJVOUtZM+SNN/Zl1qDT5tS8V+KdM0i0t4DPOYI2uDGqjc27OwDAB5BP414E23cduSueM+lfcP7VXiJtA+D2oRQyvHc6rIlhEVGeGy0gPsY1cfjXw72r0crr1q8HUqP0M6sVF2R6H8CfhrN8SvEl1YyXUtlp9nB5txcogYqzcIgBPUnJ+imvTde/ZV1SNd2heLLO5Y/wDLO8tmhA/4EpfP5CvWP2Y/B48J/C2yknjCahq2L65PcBwPLXoCMJtyD0YtXqXSvJxea1lWfs5aLQ1hSjy6n5/+NPhN8QPCEb3WqaBcNaRZY3doRNGqr/ExXJQe7AVr/Dn45+OPB7RW8t62t6auAbW+csVX0ST7y+w5A9K+6CK8r+KfwN8H+NUmvLe3TRdZfLC8tYwFkY5OZIxgPknJPDe9aU81p1lyYmKt3E6TjrFmt8K/iv4V+IUGzTLk2upom6bT7ghZVHcr2dfdemRkDOK781+evjzwX4u+GfiSGPUo5rSZH8yx1C2ciOQqfvI4wQRxxww445FfRX7PXx2j8SSQeF/GE0cOsthLW84WO7PZG7LJ6dm6cHAOGLy1Rj7Wg7xKhVu7S3PoCiiivJNgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiuZuPH3gW2naG48Z+HIZUJVkk1SFWU+hBbitvS9R0/VrCO/0u+tb60kz5c9tKskb4ODhlJB5BFNxkt0K6LVeF+M/2kfD/AIe8b3Hh+PQ7y+tbOc293eJMEKurYcIhHzhTxklckHHGCfda/Ob4mf8AJR/E/wD2F7v/ANHNXp5XhaeIlJT6IzqzcVofohp13b6hYW9/aSCW3uIllikHRkYZB/I1ZNc38Lv+SaeF/wDsD2n/AKJStLXNc0XQoEuNb1fT9Mhkbakl5cpCrH0BYjJrzZR95pGieho14P4q/aV8P6J41uNCTQb28srS4Nvc3qTBSGVsOUjI+YAjuwzXuNjd2l/aRXljcw3VtMu6OaFw6OPUEcEV4T4q/Zn0bWvGl1rkXiS6s7K8ujcT2Qtg7ZZtzhJCw2gknGVOM966sGsPzP6x8iZ832S58RP2jdA8L+JF0fT9Hn1lERHnuEnESLvUMAgKncdpB7c8V694X1ux8R+HrDXdNZmtL6BZotwwwBHQjsR0PuK8G+L/AME/Alz4pj1Kfx5YeE/tMSL9kuzGRJsUJuj3yIRwBnrzn6V7v4R0Ww8O+GdO0TSyxsrKBYoWYglgB94kcEnqSO5qsSsMqUXSvfrcUea7ua1FFFcJoFFFFABRRUF5c29nbS3V3PFb28Sl5ZZHCIijqSTwAPWgCeiszQtf0PXopJdE1nTtUjiIWRrO5SYIT0BKk4rToaaeoBRWNH4n8Nya0dDj8QaS+qhipslvYzPkDJGzO7IHtWx2oaa3AWisZvFHhpNaGiN4h0ldULBBZG8j8/cRkDZndn2xWzQ01uACisa48UeGrfWV0WfxDpMWpsyotm95GJizdBsJ3ZORgY5zWyKGmtwCuC+NvxFsvhz4RbUXWOfUrkmLT7Vj/rJMcscc7FyCceoGRkGu4upora3kuJ5FihiQu7scBVAySfwr4C+Mvja8+InxBudTQSvaBvs2m24HKxA/LwBncxO49TlsdAK9DLsH9Yqe98K3M6k+VHKa3quo63q91q+rXcl3fXUhkmmkPLE/yHYAcAAAcCtX4ZafFq3xG8OabcR+ZBc6pbxyqf4kMi7h+WatfE7wZceBdXsNHvZC17Lp0V1dLkYjkctlB9AAM9yD2rd/ZktEvPjj4cjkXKI80vPqsEjD9QK+pq1IrDSnDazsciT5rM+8RRRRXwx3nyj+2/rpm8Q6D4cjkbbbWz3cqg8FpG2rn3ARv++vevJPgx4W/wCEy+JWj6HIm61ebzbvsPJT5nHtkDaPdhWr+0pq51f41eIJN+6O2mW0jH90RoFI/wC+gx/GvWv2IfDe2HXfFsycsy2FuxHYYeT+cf5Gvq1L6rl6a3t+ZyW56h9MqMAAcYpaKK+UOsKKKKAMfxf4b0bxXoU+i67ZR3dnMOVbqrdmU9VYdiK+HPjT8M9V+G3iIQSM9zpVwxaxvQMbgP4G9HHf16j0H32aiuLeC4jCXEMcyghgJFDDI6Hmu7BY6eFl3XYznTUjjPgXf+INS+FWhXvidZBqckB3tKMPIgYiN29ygUk985712+a5Dxl44t/D+oJYpZtdTbQ0n7zYFB6djk10ejahb6rpkF/akmKZdwB6j1B9wePwrGvRqJe1cbKWxhRxlCpVlRhK8o7ou0UUVznWFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAA6V8q/tefEvUxrz+ANHuZbW0t4kbUnQlWmd1DCPP9wKVJ9ScHpX1Sa+Cv2lFK/G/xMCCD58Z5HbyUr1cnpRqV7y6K5jWlaJy2g+EfFOv2jXeieHNW1K3RyjS2to8iBsA7cqMZwRx7iuw+EPxL8Q/CvxJNZXdvcSaaZimo6ZKNrI44LKD92QdCO+MHsR9S/szyW7/AAQ8OiB42CRSq4UjhvNfIPvz+tfHXxh/5Kx4s/7DN3/6NavXpYj63UqUKkdF/mYuPIlJH6A6HqdprOi2Wr2Dl7S9t0uIGKlSyOoZTg8jg9K/PT4mf8lI8T/9he7/APRzV93fB7/kk/hL/sC2n/ola+EfiZ/yUjxP/wBhe7/9HNXFky5atRIuu7pH3t8Lv+SaeF/+wPaf+iUr5h/bbuJm+Jmk2rSsYY9HSREJ+VWaaUMfqQq/kK+nvhd/yTTwv/2B7T/0SlfLv7bP/JVtN/7AkX/o+euXLP8AfPvLq/Aen/sUXE8vwv1GGWV3jg1aRYlY5CKYomIHoMknHqT617t3rwT9iIj/AIVrq/8A2GH/APRMVe9d65serYmfqXT+FHwp+1LPPP8AHLxAssrusPkRxBjwi+RGcD0GST9Sa+of2Ybm4uvgX4bluZXldUnjDMckKlxIqj6BQAPYV8tftO/8l08S/wC/B/6Tx19Q/sr/APJBvDn/AG9f+lUtepmKX1Gl8vyMab/eM9Pooor586QooooATvXiH7aV3c2/wmtYYJ3jjutXhinVTxIgjlfafbcin6qK9vFeE/ttf8ks0z/sORf+iJ66sCr4iHqRU+Fnl37Fc0yfFS+hSRhFJpMpdAeGIkiwfwyfzNfYN+zJZTuh2ssbEH0OK+O/2Lv+St3X/YIm/wDRkVfYepH/AIl1z/1yf+RrszZL619xFH4D829Lu7uPXbW/S4lF2tykwm3Hfv3A7s+uec1+lePk/CvzNsP+P+3/AOuq/wA6/TL+GunPEk6dvP8AQmh1PzRub28fVpdRe5ma8aczGcud5k3Z3Z65zzmv0uH3fwr8yZv9a/8AvH+dfpsCNtGeJL2dvP8AQKHU/N3xdcTzeMNXupZnad7+Z2kLfMW8wnOfWv0X0aR5dIs5ZGLO8CMzHqSVGTX5x+KP+Rm1X/r9m/8AQzX6N6D/AMgKw/69o/8A0EUZykoU7f1sFDdnkv7XXi1vD3wzOkW0hS81yQ2wI6iEcyn8RtX6PXiv7Ivg2PxJ8Q31u8iWSy0JFn2tjDXDEiLj22s3sVFP/bJ1xtS+KqaSrMItJso4ipPHmSDzCw+qsg/4DXuv7KPh4aF8HrC4dHW41WV76UOOzHamPYoiN/wI0r/VcvVt5/1+QfHU9DxD9tOFo/ivZSYO2XR4iDjjIllH9Kw/2TgD8cdHJ6iG5x/35eu//bnswuoeFtQCHMkVzCz44+UxkD/x5v1rz39lKTZ8c9DX+/HcqP8AvxIf6V2Upc2Wt+TIatVPucUjdKWsrxfdGx8Kaver96CxmlH1WMn+lfKx1djrPzq8TX7ar4j1PVGO5ry8luCfUu5b+tfdn7PuhroHwf8ADtnhhJNai7l3DB3TfvMH6BgPwr4S8O6ZLrWv6do0DBJb66itkY9AzuFB/M1+k8CLFEkUahURQqgdgK+hzqfLCFJHNQV22SUUUV88dIUUUUAFFFFAHmvxk0UGOHXIU5QiKfHofun8+PxFQfBnWCk1xosrZVx50Oex6MP5H869C12xj1PSLqwkwFmjZckZwccH8Dg14T4dvH0nxFZ3TBkME4EgPBA6MPyzXv4J/WsHKi947HxmaR/s/M6eJjopb/qfQtFIpyoPtS14B9mFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAfOP7Unxh1fw7q3/CG+FrhrK6ESyX14v8ArE3jKxpn7p24JbryMY5r5b1G/vtTvZL7Ury5vbqUjzJ7iVpJHwABlmJJ4AH4V9nS/CLSfE3xn8SeLvFNr9rskkt4bK0ckJIVtot0jY6gHgDpkHPatXXF+Fej3Js/+EP0O5ljO11g0qAiMjsSQB+Wcd6+hweKp0YxhRp80ranBiatOiuetNRXmfE+ka/r2jxPDpOt6lp8btudLW6eIMfUhSMmqN1cT3VzLc3U0k88rF5JZGLO7E5JJPJJ9a+1v7T+F+f+RA03/wAFVtXUeGvDvgDXdMF9beCdDjjLldsmmQA5H0Brpq5jKiueVJoww+Kw+JlyUppst/B7/kk/hL/sDWn/AKJWvhL4mf8AJR/E/wD2F7v/ANHPX6IRR2mn2KQwxw2trbxhURFCJGijgADgADt0Feb63f8AwuS/ld/Cmk6jM7s00yaXC2588kswG4k85Gc+teZl2InCpOUIOVzpxdejRivayS9Trfhd/wAkz8L/APYHtP8A0SlfL37bP/JVdN/7AkX/AKPnr2fxt8cPB/gLVYPD91o2rEpaRSxLZwRCNI2X5VALrjAGMAYFfNf7Qnj3SviL41tNb0e1vba3h05LVlu1VWLiSRiRtZhjDjv2NaZZh6qxCqONlqaVJxcNGcVpHiLX9Iga30nXNT0+F23tHa3bxKzYAyQpAzgDn2ro/DOt+Odbvth8a63ZWMRDXl9NqM3lW0f95vm5OAcKPmYjABNev/s0W3hez+Ft3q3ibwzZ6k0+sPFbyT2UcrlRFGeC/wDCDu6Hrn3r0p9Z+GjxLE/gaxaNCSiHTLchc9cDtXpVsTJykoUr+ZwVMbhqMuWpUSfY+QviLrw8VeN9V12FJhDPIPK8w5fykUIhY+u1Vz71V07xT4n06zjstO8R6xZ2sedkMF7JGi5JJwqsAMkk/U19w+Dta8GyaiNJ0Tw1Bpxu1ZW8uziiRgFLENtPIwPSsOTVPhg0jM/gPT3YnknSrckmojjKn8P2L0QnmGEUVP2qsz5C/wCE38af9Ddr/wD4Mpv/AIqj/hN/Gn/Q3a//AODKb/4qvrz+0/hd/wBCBpv/AIKratrQLP4WazIsFv4X8PxXLDIhm0uFWP0+XBP0JpTxkoLmlQ0HSx2Fqy5YVU2fFP8Awm/jT/obtf8A/BlN/wDFUf8ACb+NP+hu1/8A8GU3/wAVX3uPAngfr/wh3h7/AMFkP/xNeS/tJar4Z+G+kaWujeAvC09/qckgSS40uJo4lj27uABkneMc+vWsqOZwrTUI0tWdzpNK7Z8yReM/G8sqxR+K/ETu5Cqq6jMSxPQAbq3fGetanD4Et/DWu6zfapq9xfrf3KXF4032BEjdI4juziRvMdmAPygIDzkDvtE+LekJ8MtU1eT4deFRr1pdwWcckWmokDCZZWDMoGeBCwIyAcr7iup/Zl8W6N4416+0jWfA3ha3v7W3+1291ZaZHGNodVKkYJzlgQR2z+O9WvKCc3S0i+4kltfc+ZdM1LU9Hujcabf3mn3BTaZLeZonKnBxlSDg8H8q028a+MmUq3i3XmUjBB1Gbn/x6v0E1bw14d1eVZdV0HS7+RRgPc2kcpA9MsDWBrmg/DPRYlfUfDPhuHd91f7MiLN9AFz+PSuaOcRqNL2V3/XkKpGNKLlOVkfn4CVIIJBByCO1emfD3xf4o0y9XxZr3ibWZdMsQ8lvbT6jKRf3AB8uJVLfMgfBc9AoIzkqD9IjUfhWZQh8C6Yqk43nSbfH19a6vStA+HOuQfaLLw34duguFbOnRbl9AQVyOlaYrHy5P3lJpHPhsVh60uWnUTfY/PsQ3ElvJdCGVoUcK8oQ7FZskAnoCcHA9jXo/wAO/FPim11S38U6/wCKtbGi6bJ5/lzajKft0qcrbxqW+fLABuyrknqAfrfxRc+A9JsBot9o+mXMMbiQafHZRuitjAbaRtU4PfBwa55NW+GN3coLzwXpy5G3zZdLgcKPwycfQU3jKleF/Yu36ETxuFoz5JVEmfI/gLwlrvxE8Ypp2nQyPJcTeZd3ITMdujNlpG7DvgZ5PA5r9C7WFba1it487I0CLn0AxWf4ai0OLTEOgW1jBZvyq2kSomfooGDWoK8fH4yWJkk1ZLoejRUeW6d7nwz8cfCfjG8+NWtxHRL+6mv7wvZtDAzrLEcCPBAxwuAfQg56V9qeFtNGjeGtL0dW3Cxs4bYH12IFz+lUNU8YaBpuqHT7u7ZZlID4jYqhIyMkD3rfRldQykEEZBHejF16tSnCM42SWnmRRqUpykoSu1v5Hiv7ZWkSah8Jk1CIJ/xK9QinkJHOxg0WB/wJ0/Kvmj4D376b8YvCtwhwX1COA/SX92f0evuX4h6BH4o8Eaz4fdYyb60kiiMn3VkxlGP+64U/hX53WdxdaVq0N1EWhurOdZFPQo6NkfiCK9TKZe1w06X9ahVVpJn6Ye1YHxG/5J94j/7BV1/6KatTR9QtdV0mz1Syk8y1vIEnhfGNyOoZT+RFM8QWX9o6DqGnjrc20kPX+8pH9a+ejpJXOh6o+DPgHpx1X4yeF7UfwX63B+kIMv8A7JX3PqfivwvpbmPU/Emj2TDqtxexxkf99MK/O3RdO1TUtWh0zSbS6udQmYpFDAhMjHByMDnpnPoM5rs9b+C/xL0XRrrV9S8MvDZWkTTTyC7gcogGSdquTwPQV9Rj8HTr1IudRR02OWnNxWiPsC5+Lnw0t32P400hj/0zm3j81yKksfit8N7x9kPjTRVb/prciIfm2K+KPhp8O/EvxCv7m18PQ2xFqENxLPOI0iDZ2kjlj909Aa9Pt/2WfGTH/SPEGgx8fwNK/P4oK4a2X4Oi+WVSzNFUm9kfWGl6rpmq25uNM1G0voRx5lvMsi/mpIq5XyLF+zf8TNEnN/ofiPSo7mLmNre7mhlP0OwYP416L8NPH/jbwpqlp4U+MVnLaPfELpurO0bRu2ceVI8ZK59CTnkbuoNcNXBwtejNS8upam+qse7UUCiuE0E6ivA/HVobPxdqUOd2ZjJ/3383/s1e+d68Q+KGP+E3vvcR/wDoC17ORv8AfyXkfLcVxX1WMu0v0Z6/4cnN1oNhcMdzSWyMT6kqDWhWH4CZm8IaYWBB8gDn0HFbteVWXLUkvM+hwkuehCT6pBRRRWZ0BRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAZ/iCWe30O+ntATOlu7R4GfmCnH614d4UtNKvtW8nWb1rS3KFt4YDLZHBJHHf8q9/IBXBHBrzvXfhpDc3r3GmXq2sbnJhePIU+xB6e1etluKp0ozhN8t+p83nuAr4idOpSjzcu6ZHYeEfBV/KIbPWpJpCMhFuE3H8MZrt/Dmj22h6cLG0aRogxbMhBOT9BXkfiXwTq+hwm8DJc26HJkiyGT3I7fUZrsPhb4pn1JH0nUZDJcxJuikY8uvQg+pHr3H0rXGUZzo+0p1OeK3ObK8TSo4n2NWiqc3s+5j/FzxBPNqB0K3kKQRAGfB++xGQPoBj8foKk8NfDc3Vilzq91NbvIAVhiADKP9okHn2xxXK+I5hF40vbiRPNWO+ZmQnG4B+me3AxXYj4p4H/ACBP/Jn/AOxrsnRxFPDwhhlurt6Hm08Rg62Mq1cdLZ2S1/Q4H41fAjxL408aDWNH1PSYLRLOG3VbqSQSZQYydqEfrXLaJ+yx4jfUYhrfiPS4bIEGQ2YkkkI7gBlUD6849DXvPhn4gf21rltpn9leR5+7955+7bhS3TaPSu59682pjMZhUqU9NPI+wwlbDYqHPRd0tDzXxf4L0fQ/AdvbaUJra00iER21upXaSzjc7cZLEnJOev41gfDrwzZ+I2vheTXEX2cR7fKYDO7dnOQfQV6L8Tf+RJ1D6J/6Gtcv8D/9Zq30h/8AZ66cPXqLL5zT1v8A5Hz+OwtKpnNOMo3TWv4m9ofgXS9G1OLUre6vHlhDbRI6lTlSvOFHY15f4T0yHWPEttp1w8iRTF9zRkBhhSeMgjqK99f7p+leIfDX/ke9P/3pP/RbUZfiKs6dacndpb/eTnGCoUq+GpQilFy1X3Han4YaLj/j91D/AL7T/wCJrj/Gvg+68OFLy3mae0LACTGHjbtnH8/5cZ9rrmPifNDH4MvVlZcybFQE4LNuHT8s/hXNg8wxDrRi5XTdjuzLJsGsNOcY8rirpoq/DzxKdS8OzPqEoE1iP30jHqmCQx/AHP0rzLxBaw/EzX4tO1qwe9tJJswxLKUa2X+8rDocdeCG7jpjX8BpIdA8TyAkRixIP12vj+tWvgyiHxFcyHqtsQPxYV3ujTw8q1SK1VreVzyaWNxGJWFpuVr7vvZm5p3wc8AWXgy68KJooksbuRZp5JZCZnkXhW8zqCOcAYAyePmOeAvvBFj8MtSUeGbaW0iuMMLtpjJLKVOdrHgAAn7oGDwTnHH0Bkeorg/jTj/hHLXBGfta/wDoD152X4mbrqM9VLe59BncG8FJwlZrXQ07DxVFL4HbX5VHmRRkSIOMyDjHsCcfnXmOk6fqvjLX5GeXc7/PNM/3Y17DH6AVdsCR8LtQGTg6gufyT/Cum+CcaDTtQlCjeZlUn2A4/ma9BRjg6VWpBa3svI+fdSeaV6FCq/d5bvz3/wAh7/C/Tvs21dRuxNj7xClc/TGf1rh5U1fwZ4kAVwk0fII+5NGfX1Bx+BHqK95ry/43Kv2nS32jcUlBP4r/AI1hl2Nq16vsqrupdzszrK6GFw/1jDrllG2xHB4Fn17UW1j7ciWF6ftCnGZRv+baR04zjOT9K0NR+GFn9kc6ff3InAyvnbWU+3ABH15rf+GDM3gfTyxyR5g/ASMBXS1zVsfiKdRwUtIu33HbhcmwdegqkoazV38zxPwNq154c8TiyudyQyS+Rcxk8K2cBvwPf0zXtecjNeW+OfDBuvGBmGrafbLeFDsml2upwFOB36cdOeK9SX7gGegp5lOnV5Ksd2tRZFSrYf2tCfwxeh4X8R4BB401FQOCysPxVSf1NeweEZRN4Y02QEHNrH+e0V5v8ZbIweILe9VcLcQ4J9WU4P6EV1nwjvluvCaW+MNaytGeeuTuB/8AHsfhXVjv3uBp1F00ODKn7DNq9KXW7/X8jsetfDv7U3hFvDHxSu72GMrY61m9hYDjzCf3q/Xflvo4r7jrzj9oLwCPH3gGeztUB1axJudPY/xOBzH9GHHpnae1cGW4n6vWTez0Z9ZUjzRMb9kzxSPEPwqt9OmmL3uiubOTcwLGL70Rx2G07B/uGvXz0r4V/Z28ct4A+IyLqTNBpt+fsmoK4I8o5+VyOxVuvsWr7pUhlBBBBGRg1WZ4b2NZtbPVCpS5onw7DayeB/2oobXcLeO38QoAzHAWCZxgn/tnJ1r7T8RaZBrXh7UdHuP9TfWsttJj+66lT/Ovmv8AbV8HSR3+m+N7OJjFIos70qPuuMmNz9RuXP8AsqO9e9fCbxVF40+H+k6+jKZp4Atyq8bZl+WQY7DcCR7EVrjpOrSpV16P1Qqas3E+PPgb4pm+GfxaVdZBt7YyPpuqITnyvmwW44+V1BJ54Bx1r7rjZZI1dGDKwyCDkEV8k/th/D6TS/EK+ONNgP2DUiI74KBiK4AwGwOgcDr/AHgcn5hV/wDZr+N8emQW3g3xldhLJAI9P1CVuIR2ikP93+638PQ8YxvjaH1ulHEUt7aomEuR8rPqo1k+KvD+k+KNDudF1uzjurO4Xa6MOVPZlP8ACw6gjkGtON0dFeNg6MMhgcgj1p9eEm4u6Ojc8o+HGv6l4T8Vf8Ku8XXLzyrGZNA1OQ/8f1sP+WbH/nqmMe4H0LerV5t+0T4QfxP4AlvNO3R63ojf2hps0ZxIrpyyg9eQOAMfMqHtVj4DfEGL4heB4r+ZkXVbQiDUYhgYkxw4HZWHI99w7V1VIe0p+2j6P17/ADITs7HoP1rwz4lyLJ421BkIIBRfxCLn9a9wmdY4md2AVQSST0FfPU7PrHiB2jQq97dEqvXG9/8A69ejkkbVJVHskfL8VVL0qdFbt/1+Z7l4Pi8nwtpiEci1jz9dozWvUdtGkMCRIAFRQoHoBUnavGqS5pOXc+mow9nTjHskFFFFSahRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUHpRRQB5N4h8Wa/beMJ7CPUjb2q3Kpt8pDtTI55GenNerqflHuK8q+L+hTRagNcgRmhlCrOQPuMOAT7EYH1HuKueFPiLbx2cVpraSiRAFFwg3Bh6sOufpnNe1XwqxGHhUoR2Wtt7nyuDx7weMq0cXJ6u6b2sejXEaSwPHIqsjKQQRkEHtXiPgfMHj20S3O5RM6A9crtYfyrp/FnxFgls5bTREl8yQFTcONoUHuo65+uMVV+EGgzS3512dCsMQZICeN7HgkewGR9T7GtMNSnhcNUlV05lZIxx+Ip5hjqNPDu/K7trtoc5rEcL+PZ47oDyX1EiTPHymTn9K9THgbwsQD/ZY/7+v/jXFfFvQZrbVDrcCE29xgSlf+WbgY59iMc+uaveGviTFFZR2+swTvKgC+dFhgw9WBIwfpnNaV1Wr0KdTDt6KzSZhg3hcJi6tLGRWrum0dXD4a8PaLIdUtrFYZbZGcP5jHb8pz1OOmawvB3jm81vXYtPlsYY0dWYsjEkYGaxPGfj8app76fpcEsMUo2yySYDFe4ABOAfX07Vp/B/QZoEl1u6jKecmy3U9SuclvxwMfj61zyw7p4eVXE6yeiu9TsjjVWxsKGA0gtZWWh0fxN/5EjUPon/AKGtct8Dv9Zq30h/9nrqPid/yJGofRP/AENa5f4H/wCs1b6Q/wDs9TQ/5FtT1/yNMX/yO6P+F/qelv8AdP0r580HU5NG1qHUoolkeEthWOAcqR/WvoN/ut9K8K8BWtve+MbK1u4UmhcybkYZBwjEfqKvKHFU6zkrq3+ZlxJGcq+HVN2k3o/PQ33+J+pFSF061DdjuY1z2papr/i/UYoCjTPn93BCuEXsT/8AXJ4r07X/AAPot/pzw2lpFZ3HWOWNcYPv6ivNNOvNX8F+IGSSMqykCaEn5JU9Qf5Ht+Yrswc8NOLlh4WmtkzzMypY6jKMMZUbpt6tHoMOgJ4f+HmpWrMr3ElrK87joW2Hgew6fr3ryvSBqxnf+yftvm7fm+y7t2M99vOM17FqWr2WteBNRvbKTcjWkoZT95G2HKketcX8F/8AkPXf/Xv/AOzCscJXnTo1qk1d31TOnMcLSrYnD0aLtG2jRi48a+niH8pqpauPEH2df7WGqeRvG37V5m3dg9N3GcZ/WvoHA9BXCfGnA8OWvH/L4v8A6A9Thcy9pWjHkSuXmGReww06ntZOy2Zx9j/yTC//AOwgv/oKV1fwT/5BN/8A9dx/6CK5Sx/5Jhf/APYQX/0FK6v4J/8AIJv/APruP/QRWuN/3ar/AIv8jnyn/faH+D/M9BFeYfHD/j40r/dl/mlenivMPjh/x8aV/uy/zSvMyn/e4/P8j3+Iv+RfP5fmjqPhb/yI9h9ZP/RjV09cx8Lf+RGsPrJ/6Maunrmxf8efq/zO/Lv90pf4V+R4h8VCT41uwSSAqAAnp8gr2mz5tY8/3B/KvFvin/yOt7/ux/8AoAr2mz/49Yv9wfyr0Mx/3aj6f5HiZJ/v2J9f1ZynxY0s3/hlrmNcy2beaP8Ad6N+nP4Vxfwm1ddP8QmzlYLDeqEyezj7v8yPqRXsM0aSxNG6hlYEMCOCPSvBPFWlTeH/ABFLaqWRUYS27g87SflP1HT6itcsnGvRnhZfI58+pTweKp46mvJ/15rQ9+orA8D6/Fr+ipOWUXUQCXCDs3r9D1H/ANat+vFqU5U5uEt0fVUK0K9NVIO6Z8yftT/B+aae48eeF7QOWG/VbSJOSe86gdf9of8AAucsas/stfGKC4s7XwH4oufLuowItLvJG+WZe0DE9GHRT0YfLwQN30kQCMGvnv42/s822tzza/4F8mx1FiXmsGOyGY9coeiMT2+6c/w859Khiqdal7Cv8n2CUHF80T3DxVoWneJvDt9oWrQedZXsRjkXjI9GGejA4IPYgGvmXwBqurfs/wDxIuPCvitpJPC2qSb4b1UOzPRZwOccYV15I4POBul+Hfxx8TeA75fCXxR0vUHSDCLcyIRcwrnALA/61PRgc4HBbivc5z4A+LnhSS1W5sdcsHAY+W+JbZiDtbH3o369QD14xmkoTwqcKivCXVfmvMd1LVbnR6tYaR4n8OTWF7HBqGl6hBhgrbklRhkMpH4EEexFfD/xt+FWr/DnWidst5oVw5+x3wXp/wBM5McK4/JgMjuB73pXg/4o/Cid08F3EfjDwxuLf2VdyiK4gHJOxjxn/d6k/czzXTw/FTwPrNt/YXjWxu/Dk93GVksPENm0KSL3O9hsK+hJB9qrC1Z4WV6T5ov+tugpRU1roz5e+GnxV+I/huOLQvDl7NqELEiCxlt/tO046IPvAcZwDjrxXZax+0P8V9Km+yapoml6bcFdwS406aN8euHf+ld/H8FdLj1uDxr8HvGFtZXELloY2dbu1OQQyhwSQpBIwdx+lUvit8PPjZ8Qo7HTtafwattauZEls2lQFiMZJdS/TsMD2OBjteIwlWom4q3W+jIUZpbnk2p/H74p3zEL4hS0RuPLt7OED8ypb9a7T4C6T4p+GPj7QLnxMtvp1j4uEln9lknxMGADxOYx0JchB3G8ghSRVGP9mHx5Bica94dhkjO9WW4mG0jnOfK4x61kfDHQfFPiz43WlxquuPrUHhy8S4vdW+1me3SOF96hZGPIYrgY9S2MAkbVJYadKUaNkrO+n3fiSuaLvI+q/inqy6d4Zkt0I8+8zCg/2T94/lx+IrhfhPphvvEy3TrmGzXzCccbjwo/mfwrN8b66+va49wm4W0f7u3U/wB31+pPP5DtXqnw80M6JoEaTLtup/3s3qCei/gP1zXNNfUcFyv4pHytN/2tmvOvgp/1+LOmooor58+1CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAIp4o5onimRZI3BDKwyCPQ1xuq/DfQ7uZpbZ7izzzsjYFM/Q8j6ZxXb0mK2o4ipRd4SscuJwVDFK1WKZxWlfDjRLSdZbl7i82/wAEjAJn6Dk/TOK7KGKOGJIokWNEACqowAPQU+iitiKlZ3nK4YbBUMMrUopEdxDFcQvDNGskbgqysMgj0IrjtS+G+hXM5lt3ubTP8Ebgr+oJ/Wu1paKWIqUf4crBiMFQxK/ewTOP0f4e6DYzCaVZb1xyonYFR+AAB/HNdcqhRgDAHSlpTU1a9Sq7zdysPhKOGVqUUjP8QaZFrGkzabNI8cc2MsmMjBB7/Ss7wh4WtPDbXJtrieb7Rt3eZjjbnpge9dBRQq01B009H0CWFpSqqs17y2YMMgj1rkNA8B6fo+sw6nDe3UkkRYhXK7TlSOw966/vS8UU606cXGLsnuFbC0q0oznG7jt5CVi+KfDen+IbZIrsMkkZzHMmNy+o+h9K2qMVMKkqcuaLs0XVowrQcKiumcZpvgK209LmK31S9EdzC0UyHaQwII9Oozwf/r1d8J+D7Pw9eS3VtdXEzSR7CJMYAyD2HtXTUc1tPF1ppqUt9zlp5bhaUoyjGzjt5B+NY3izQLfxFYR2lxNLEscokBjxnIBGOfrWzRWMJypyUouzR11aUK0HCaumclD4GsIvD02ii7uTFLOJi/y7gQAMdMY4rR8JeHLbw5azQW080olfeTJjIOMdhW7Sdq1nias4uMpaPU56eAw9KanCNmlZegdq57xf4VtfEj2zXNzPCbcMF8vHOcdcj2roaKzp1J0pc0HZm1ehTrwdOorpmd4d0uLRdHg02CR5I4t2GfGTlie31rRooqZScpOT3ZdOEacVCKskcj4i8CWGtatLqM95dRSSBQVTbjgAdx7V1kS+XGqDooAp1ArSdec4qMndLYxo4SjRnKcI2ctwrmvH/hxdf0nEXF5BloGzjPqp9jj8wK6Wg1NKpKlNTjuisRh4Yim6VRXTPAPDmr33hrW/PRCGQmOeF+Nwzyp9D79j+Ve4aHqtnrOnx3tlIHjccg9VPcEdjXMfEHwYusI2o6cqpfqPmXoJh6H0b0P4H1Hmmi6vqvhvUna3LwyA7ZoJAcNjsw/r1FfQVaVPM6ftKek1uj46hiK+RVvY1lek9n/X4o+gaK5rwt4x0rXEWMP9muz1gkPJP+yf4v5+1dKOa8CpSnSlyzVmfY0MRSxEFOnK6MnxL4c0HxNYfYdf0iz1K3BJVbiINsOMblPVTgnkYNeSa1+zf4dS+Gp+Ddf1jwzfxnMLRSmVIz7chx/33XuVFVSxNWl8LNXFPc8SsNK/aE8MbYrfWfDvi20RdqLe7o5sepbC5PuWatWLxf8AF+KIpqPweguiOr2+vQKD/wABbJr1jmg1bxPN8UF+X5MOXzPFrmHxDqMpluf2dfD7znkS3Wp2TcnvkRsavWFh8XktTaaJofgHwnbMMYjEkrp9FRQhP14r1o1S1bVLDSrU3OoXMcEY6bjyT6AdSfpQqrk+WMF+L/Uicowi5SdkjzCX4R6r4hbzPiL8QdZ12AkF7C1AsrRgOgZE+99flNZ/iXUdE0vS18J+DrK2sNIiI80264EzDHfq3QZY5LEdfWfxp44u9aD2diHtbAjDDPzy/XHQew/HPSk8BeDJ9amS+1BHi05TkDo0/sPRfU/gPUe3QofV4e3xT22X/A7nyOPzOpmE/qmCV77v+uhc+Fvhdr25TWr2Mi2hbMCn/lo4/i+gP6/SvWqjt4YoIUhhjVI0UKqqMAAdAKkrxcZipYmpzyPo8ty+GAoqnHfq+7FooorlPQCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASud8W+E9N1+PfKPIuwPlnQc/QjuP85FdFQaunVnSlzQdmY16FOvBwqK6Z4L4i8LazoTl7iAyQA/LcRZKfj3Xt1/DNXND8c69pirG1wLyEfwT8kD2br+ea9tZQwwQCD61zWteCPD+plnNp9mlP8AHbnYfy6fpXtQzWnVjy4mF/M+WrcPV8PP2mBqW8n/AF+Zj6d8TtMlCrfWNzbOTglCJFA9c8H9K2o/HPhaRsLqij/eicfzFcnf/C6dSWsNUjcdlmjxj8R/hWTcfDrxHEfkjtZx/sS4/mBT+r5dV1jO39eZP13O6CtOmpedv8mejTeM/DMS5bVoSP8AZBY/oKzr/wCIvh23UeRJcXZPURREY/76xXCp8P8AxMzYNpEo9WmXH6VoWnwx1eRx9pvbSBe5Tc5H4YH86PqeXw1lUuP+085q6Qo2+X+bF1n4l6jcKU0y1js1OR5jne/sR0A/WuUVdZ8Q6jwLm/uW7nLbR/JR+Qr03Svhto1sQ97LPesOxOxPyHP6119hY2lhbiCztooIxyFjQKM/hQ8xwuGVsPDXv/WolkuPxsr42pZdl/VjhfCPw6htyl5rjLPKMEW68op/2j/F9On1r0FFVFCoAFAwAOgFOoNeRXxNTES5qjPpcHgaGDhyUo2/MWiiisDsCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAqG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QLh/8BpP/iqP+E68X/8AQLh/8BpP/iq9X2j0H5UbR6D8qPrlD/nyvvD+ysX/ANBL+48o/wCE68X/APQLh/8AAaT/AOKrp/AHiDW9ZnuU1TT1hjjUFJFjZBnPT5ic+tdftX0H5UoAHQCsquKpTg4xppPub4bL8RSqKc67kl0sLRRRXEeuFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH//2Q==";
+
+/* =========================================================================
+   ÉTAT DE L'APPLICATION
+   ========================================================================= */
+let DATA = { rev: 0, etatOptions: [...DEFAULT_ETATS], categories: {} };
+CATEGORIES.forEach(c => DATA.categories[c.id] = []);
+
+let fileHandle = null;      // File System Access API handle
+let loadedRev = null;       // rev at time of last load/save (concurrency check)
+let currentCategory = null; // null = dashboard
+let editingRecordId = null;
+let editingCategoryId = null;
+let sortState = {};         // per category: {col, dir}
+let searchState = {};       // per category: search text
+let filterEtatState = {};   // per category: etat filter
+
+let importWorkbook = null;
+let importStep = 1;
+
+/* =========================================================================
+   PERSISTANCE — File System Access API (avec repli JSON manuel)
+   ========================================================================= */
+const supportsFS = 'showSaveFilePicker' in window;
+
+/* --- mémorisation du fichier connecté entre deux ouvertures (IndexedDB) --- */
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('registre-doc-store', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('handles');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSetHandle(handle){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction('handles','readwrite');
+    tx.objectStore('handles').put(handle, 'lastFile');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGetHandle(){
+  const db = await idbOpen();
+  return new Promise((resolve)=>{
+    const tx = db.transaction('handles','readonly');
+    const req = tx.objectStore('handles').get('lastFile');
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function loadFromHandle(handle, announce){
+  fileHandle = handle;
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  DATA = JSON.parse(text);
+  if(!DATA.etatOptions) DATA.etatOptions = [...DEFAULT_ETATS];
+  CATEGORIES.forEach(c => { if(!DATA.categories[c.id]) DATA.categories[c.id] = []; });
+  loadedRev = DATA.rev || 0;
+  const fixed = normalizeDatesInData();
+  fileStatusLabel();
+  if(announce) showBanner('ok', 'Fichier de données chargé automatiquement : ' + fileHandle.name + (fixed? (' — '+fixed+' date(s) corrigée(s).') : ''));
+  render();
+  if(fixed) await persistAfterChange();
+}
+
+/* Au démarrage : tente de reconnecter automatiquement le dernier fichier utilisé,
+   sans redemander de le choisir. Si le navigateur exige une confirmation de permission
+   (après redémarrage du navigateur par ex.), un bandeau propose de reconnecter en 1 clic. */
+async function tryAutoReconnect(){
+  if(!supportsFS) return;
+  try{
+    const handle = await idbGetHandle();
+    if(!handle) return;
+    const perm = await handle.queryPermission({mode:'readwrite'});
+    if(perm === 'granted'){
+      await loadFromHandle(handle, true);
+    } else {
+      showBanner('warn', 'Un fichier de données a déjà été connecté sur cet ordinateur (« '+handle.name+' »). <button class="btn btn-sm" style="margin-left:8px" onclick="reconnectSavedHandle()">Reconnecter en 1 clic</button>');
+    }
+  }catch(e){ /* pas de fichier mémorisé ou accès refusé : rien à faire */ }
+}
+async function reconnectSavedHandle(){
+  try{
+    const handle = await idbGetHandle();
+    if(!handle) return;
+    const perm = await handle.requestPermission({mode:'readwrite'});
+    if(perm === 'granted'){
+      await loadFromHandle(handle, true);
+    } else {
+      showBanner('warn', "Permission refusée. Utilisez « Ouvrir le fichier de données » pour le reconnecter manuellement.");
+    }
+  }catch(e){ console.error(e); }
+}
+
+function normalizeDateValue(s){
+  if(!s) return '';
+  s = String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(m){
+    let [, a, b, y] = m;
+    if(y.length===2) y = (parseInt(y,10)<50 ? '20':'19') + y;
+    let month = parseInt(a,10), day = parseInt(b,10);
+    if(month>12 && day<=12){ const t=month; month=day; day=t; }
+    if(month>=1 && month<=12 && day>=1 && day<=31){
+      return y+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    }
+  }
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return s;
+}
+function normalizeDatesInData(){
+  const dateFields = Object.entries(FIELD_DEFS).filter(([,v])=>v.type==='date').map(([k])=>k);
+  let changed = 0;
+  CATEGORIES.forEach(c=>{
+    (DATA.categories[c.id]||[]).forEach(r=>{
+      dateFields.forEach(f=>{
+        if(r[f]){
+          const norm = normalizeDateValue(r[f]);
+          if(norm !== r[f]){ r[f] = norm; changed++; }
+        }
+      });
+    });
+  });
+  return changed;
+}
+
+function parseRefParts(ref){
+  const matches = [...ref.matchAll(/\d+/g)];
+  if(matches.length===0) return null;
+  const yearIdx = matches.findIndex(m => m[0].length===4 && +m[0]>=1900 && +m[0]<=2100);
+  let counterIdx = matches.findIndex((m,i)=> i!==yearIdx);
+  if(counterIdx===-1) counterIdx = matches.length-1;
+  return { matches, yearIdx, counterIdx };
+}
+
+function suggestNextReference(catId){
+  const refs = (DATA.categories[catId]||[]).map(r=>r.reference).filter(Boolean);
+  if(refs.length===0) return '';
+  const currentYear = String(new Date().getFullYear());
+  const candidates = refs.map(r=>({ref:r, parsed:parseRefParts(r)})).filter(c=>c.parsed);
+  if(candidates.length===0) return '';
+
+  const usesYear = candidates.some(c=>c.parsed.yearIdx!==-1);
+  let pool = candidates;
+  if(usesYear){
+    const sameYear = candidates.filter(c=> c.parsed.yearIdx!==-1 && c.parsed.matches[c.parsed.yearIdx][0]===currentYear);
+    if(sameYear.length) pool = sameYear;
+  }
+
+  let best = null, bestVal = -1;
+  pool.forEach(c=>{
+    const val = parseInt(c.parsed.matches[c.parsed.counterIdx][0], 10);
+    if(val > bestVal){ bestVal = val; best = c; }
+  });
+  if(!best) return '';
+
+  const target = [...best.ref.matchAll(/\d+/g)][best.parsed.counterIdx];
+  const nextVal = bestVal + 1;
+  const padded = String(nextVal).padStart(target[0].length, '0');
+  return best.ref.slice(0, target.index) + padded + best.ref.slice(target.index + target[0].length);
+}
+
+function regenerateReferenceSuggestion(evt, catId){
+  evt.preventDefault();
+  const input = document.querySelector('[data-input="reference"]');
+  if(input) input.value = suggestNextReference(catId);
+}
+
+function fileStatusLabel(){
+  const el = document.getElementById('fileStatusLabel');
+  if(fileHandle){ el.textContent = fileHandle.name + ' (connecté)'; }
+  else { el.textContent = 'aucun fichier ouvert'; }
+}
+
+async function newDataFile(){
+  if(!supportsFS){ alert("Votre navigateur ne permet pas de créer un fichier directement.\nUtilisez plutôt le bouton « Exporter (JSON) » puis enregistrez le fichier vous-même sur le dossier partagé."); return; }
+  try{
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: 'registre-documents-data.json',
+      types: [{ description:'Données JSON', accept:{'application/json':['.json']} }]
+    });
+    DATA = { rev: 1, etatOptions:[...DEFAULT_ETATS], categories:{} };
+    CATEGORIES.forEach(c => DATA.categories[c.id] = []);
+    loadedRev = DATA.rev;
+    await writeToHandle();
+    await idbSetHandle(fileHandle);
+    fileStatusLabel();
+    showBanner('ok', "Nouveau fichier de données créé et connecté. Placez-le sur votre dossier partagé. Sur cet ordinateur, l'outil le rechargera désormais automatiquement à chaque ouverture. Chaque collègue doit, sur son propre poste, utiliser « Ouvrir le fichier de données » une première fois — ensuite ce sera automatique pour lui aussi.");
+    render();
+  }catch(e){ if(e.name!=='AbortError') console.error(e); }
+}
+
+async function openDataFile(){
+  if(!supportsFS){
+    document.getElementById('jsonImportInput').click();
+    return;
+  }
+  try{
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description:'Données JSON', accept:{'application/json':['.json']} }]
+    });
+    await idbSetHandle(handle);
+    await loadFromHandle(handle, false);
+    showBanner('ok', 'Fichier de données chargé : ' + fileHandle.name + ". Il sera rechargé automatiquement la prochaine fois sur cet ordinateur.");
+  }catch(e){ if(e.name!=='AbortError') console.error(e); }
+}
+
+async function writeToHandle(){
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(DATA, null, 1));
+  await writable.close();
+}
+
+async function saveDataFile(auto){
+  if(!fileHandle){
+    if(!auto) downloadJSON();
+    return;
+  }
+  try{
+    // vérification simple de concurrence : quelqu'un d'autre a-t-il enregistré depuis notre chargement ?
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    let onDisk = null;
+    try{ onDisk = JSON.parse(text); }catch(e){}
+    if(onDisk && typeof onDisk.rev === 'number' && loadedRev!==null && onDisk.rev !== loadedRev){
+      const proceed = confirm("Attention : ce fichier a été modifié par quelqu'un d'autre depuis votre dernier chargement.\n\nCliquez sur OK pour écraser quand même avec vos changements, ou sur Annuler pour recharger le fichier avant de continuer (recommandé).");
+      if(!proceed){
+        DATA = onDisk;
+        loadedRev = DATA.rev;
+        render();
+        return;
+      }
+    }
+    DATA.rev = (onDisk && typeof onDisk.rev==='number' ? onDisk.rev : (DATA.rev||0)) + 1;
+    await writeToHandle();
+    loadedRev = DATA.rev;
+    if(!auto) showBanner('ok', 'Enregistré dans ' + fileHandle.name + '.');
+  }catch(e){
+    console.error(e);
+    showBanner('warn', "Échec de l'enregistrement automatique. Utilisez « Exporter (JSON) » pour ne rien perdre.");
+  }
+}
+
+function downloadJSON(){
+  DATA.rev = (DATA.rev||0)+1;
+  loadedRev = DATA.rev;
+  const blob = new Blob([JSON.stringify(DATA,null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'registre-documents-data.json';
+  a.click();
+}
+
+function handleManualJSONImport(evt){
+  const f = evt.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    DATA = JSON.parse(reader.result);
+    if(!DATA.etatOptions) DATA.etatOptions = [...DEFAULT_ETATS];
+    CATEGORIES.forEach(c => { if(!DATA.categories[c.id]) DATA.categories[c.id] = []; });
+    loadedRev = DATA.rev || 0;
+    const fixed = normalizeDatesInData();
+    showBanner('ok', 'Fichier JSON chargé (mode manuel — pensez à ré-exporter après vos modifications).' + (fixed? (' '+fixed+' date(s) corrigée(s).') : ''));
+    render();
+  };
+  reader.readAsText(f);
+}
+
+async function persistAfterChange(){
+  if(fileHandle) await saveDataFile(true);
+}
+
+/* =========================================================================
+   RENDU — SIDEBAR
+   ========================================================================= */
+function renderSidebar(){
+  const zone = document.getElementById('sidebarGroups');
+  zone.innerHTML = '';
+
+  const dashBtn = document.createElement('button');
+  dashBtn.className = 'cat-btn' + (currentCategory===null?' active':'');
+  dashBtn.style.margin = '10px 10px 4px 10px';
+  dashBtn.style.width = 'calc(100% - 20px)';
+  dashBtn.innerHTML = '<span>📊 Tableau de bord</span>';
+  dashBtn.onclick = () => { currentCategory=null; render(); };
+  zone.appendChild(dashBtn);
+
+  GROUPS.forEach(g => {
+    const label = document.createElement('div');
+    label.className = 'side-group-label';
+    label.textContent = g;
+    const wrap = document.createElement('div');
+    wrap.className = 'side-group';
+    wrap.appendChild(label);
+    CATEGORIES.filter(c=>c.group===g).forEach(c=>{
+      const btn = document.createElement('button');
+      btn.className = 'cat-btn' + (currentCategory===c.id?' active':'');
+      const n = DATA.categories[c.id] ? DATA.categories[c.id].length : 0;
+      btn.innerHTML = '<span>'+c.label+'</span><span class="count">'+n+'</span>';
+      btn.onclick = () => { currentCategory = c.id; render(); };
+      wrap.appendChild(btn);
+    });
+    zone.appendChild(wrap);
+  });
+}
+
+/* =========================================================================
+   BANNERS
+   ========================================================================= */
+function showBanner(kind, msg){
+  const zone = document.getElementById('bannerZone');
+  zone.innerHTML = '<div class="banner '+kind+'">'+msg+'</div>';
+  if(kind==='ok') setTimeout(()=>{ if(zone.firstChild) zone.innerHTML=''; }, 4500);
+}
+
+/* =========================================================================
+   HELPERS DATES / ÉTAT
+   ========================================================================= */
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr);
+  if(isNaN(d)) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((d-now)/86400000);
+}
+function etatPillClass(etat){
+  if(!etat) return 'state-autre';
+  const e = etat.toLowerCase();
+  if(e.includes('vigueur')) return 'state-vigueur';
+  if(e.includes('annul')) return 'state-annulee';
+  if(e.includes('cours')) return 'state-cours';
+  return 'state-autre';
+}
+function fmtDate(s){
+  if(!s) return '';
+  const d = new Date(s);
+  if(isNaN(d)) return s;
+  return d.toLocaleDateString('fr-FR');
+}
+
+/* =========================================================================
+   RENDU — CONTENU PRINCIPAL
+   ========================================================================= */
+function render(){
+  renderSidebar();
+  fileStatusLabel();
+  const title = document.getElementById('viewTitle');
+  const sub = document.getElementById('viewSub');
+  const toolbar = document.getElementById('toolbar');
+  const content = document.getElementById('content');
+
+  if(currentCategory===null){
+    title.textContent = 'Tableau de bord';
+    sub.textContent = "Vue d'ensemble de tous les registres de la Direction de la Maintenance";
+    toolbar.innerHTML = '';
+    renderDashboardToolbar();
+    content.innerHTML = renderDashboard();
+    return;
+  }
+
+  const cat = CAT_BY_ID[currentCategory];
+  title.textContent = cat.label;
+  sub.textContent = (DATA.categories[cat.id]||[]).length + ' document(s) dans ce registre';
+  toolbar.innerHTML = '';
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-primary';
+  addBtn.textContent = '+ Ajouter un document';
+  addBtn.onclick = () => openRecordModal(cat.id, null);
+  toolbar.appendChild(addBtn);
+  toolbar.appendChild(makeToolbarButton('Exporter ce registre (Excel)', ()=>exportCategoryExcel(cat.id)));
+  content.innerHTML = renderCategoryTable(cat);
+  attachTableEvents(cat);
+}
+
+function makeToolbarButton(label, onClick){
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.textContent = label;
+  b.onclick = onClick;
+  return b;
+}
+
+function renderDashboardToolbar(){
+  const toolbar = document.getElementById('toolbar');
+  if(fileHandle){
+    const status = document.createElement('span');
+    status.className = 'btn btn-ghost';
+    status.style.cursor = 'default';
+    status.innerHTML = '✓ Connecté : <b style="margin-left:4px">'+escapeHTML(fileHandle.name)+'</b>';
+    toolbar.appendChild(status);
+    toolbar.appendChild(makeToolbarButton('Changer de fichier', openDataFile));
+  } else {
+    toolbar.appendChild(makeToolbarButton(supportsFS? 'Créer un nouveau fichier de données' : 'Créer (télécharger un fichier JSON)', newDataFile));
+    toolbar.appendChild(makeToolbarButton('Ouvrir le fichier de données', openDataFile));
+  }
+  toolbar.appendChild(makeToolbarButton('Enregistrer', ()=>saveDataFile(false)));
+  toolbar.appendChild(makeToolbarButton('Exporter (JSON)', downloadJSON));
+  toolbar.appendChild(makeToolbarButton('⚡ Importer tout mon Excel (automatique)', triggerBulkImport));
+  toolbar.appendChild(makeToolbarButton('Importer depuis Excel (feuille par feuille)', openImportModal));
+  toolbar.appendChild(makeToolbarButton('Exporter tout (Excel)', exportAllExcel));
+}
+
+function renderDashboard(){
+  let total=0, dueSoon=0, expired=0, enVigueur=0;
+  const upcoming = [];
+  CATEGORIES.forEach(c=>{
+    (DATA.categories[c.id]||[]).forEach(r=>{
+      total++;
+      if(r.etat && r.etat.toLowerCase().includes('vigueur')) enVigueur++;
+      const d = daysUntil(r.echeance);
+      if(d!==null){
+        if(d<0) expired++;
+        else if(d<=60) dueSoon++;
+        if(d!==null && d<=90) upcoming.push({...r, _cat:c.label, _days:d});
+      }
+    });
+  });
+  upcoming.sort((a,b)=>a._days-b._days);
+
+  let html = '';
+  if(!fileHandle){
+    html += '<div class="banner info">';
+    html += (supportsFS
+      ? "Astuce : cliquez d'abord sur <b>« Créer un nouveau fichier de données »</b>, enregistrez-le sur votre dossier partagé, puis dites à vos collègues d'utiliser <b>« Ouvrir le fichier de données »</b> pour pointer vers ce même fichier depuis leur poste (une seule fois — ensuite ça se reconnecte automatiquement)."
+      : "Votre navigateur ne permet pas la sauvegarde directe dans un fichier partagé (fonctionnalité disponible sur Chrome ou Edge). Utilisez « Exporter (JSON) » après vos modifications, et « Importer un fichier JSON » pour recharger les données à la prochaine session.");
+    html += '</div>';
+  }
+
+  html += '<div class="cards">';
+  html += cardHTML(total, 'Documents au total', '');
+  html += cardHTML(enVigueur, 'En vigueur', 'accent-teal');
+  html += cardHTML(dueSoon, 'Échéances sous 60 jours', 'accent-amber');
+  html += cardHTML(expired, 'Échéances dépassées', 'accent-red');
+  html += '</div>';
+
+  html += '<h3 style="font-size:14px;margin:22px 0 10px 0;">Échéances à surveiller (90 jours)</h3>';
+  if(upcoming.length===0){
+    html += '<div class="banner ok">Aucune échéance dans les 90 prochains jours.</div>';
+  } else {
+    html += '<table><thead><tr><th>Référence</th><th>Titre</th><th>Registre</th><th>Échéance</th><th>Jours restants</th></tr></thead><tbody>';
+    upcoming.slice(0,25).forEach(r=>{
+      html += '<tr><td class="ref">'+escapeHTML(r.reference||'')+'</td><td>'+escapeHTML(r.titre||'')+'</td><td>'+escapeHTML(r._cat)+'</td><td>'+fmtDate(r.echeance)+'</td><td class="'+(r._days<0?'due-soon':'')+'">'+(r._days<0? (Math.abs(r._days)+' j de retard') : (r._days+' j'))+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  return html;
+}
+function cardHTML(num,label,accent){
+  return '<div class="card '+accent+'"><div class="num">'+num+'</div><div class="lbl">'+label+'</div></div>';
+}
+
+/* =========================================================================
+   TABLE PAR REGISTRE
+   ========================================================================= */
+function visibleFields(cat){
+  const base = TEMPLATES[cat.template].filter(f => !(cat.fixedSite && f==='site'));
+  return cat.attachAccept ? [...base, 'pieceJointe'] : base;
+}
+
+function renderCategoryTable(cat){
+  const fields = visibleFields(cat);
+  let rows = [...(DATA.categories[cat.id]||[])];
+
+  const search = (searchState[cat.id]||'').toLowerCase();
+  if(search){
+    rows = rows.filter(r => fields.some(f => {
+      const v = f==='pieceJointe' ? (r[f] ? r[f].name : '') : (r[f]||'');
+      return String(v).toLowerCase().includes(search);
+    }));
+  }
+  const etatFilter = filterEtatState[cat.id];
+  if(etatFilter){ rows = rows.filter(r => r.etat === etatFilter); }
+
+  const sort = sortState[cat.id];
+  if(sort){
+    rows.sort((a,b)=>{
+      const va = (a[sort.col]||'').toString().toLowerCase();
+      const vb = (b[sort.col]||'').toString().toLowerCase();
+      return (va<vb?-1:va>vb?1:0) * (sort.dir==='asc'?1:-1);
+    });
+  }
+
+  let html = '<div class="filters">';
+  html += '<input type="text" id="searchInput" placeholder="Rechercher..." value="'+escapeHTML(searchState[cat.id]||'')+'">';
+  if(fields.includes('etat')){
+    html += '<select id="etatFilterSelect"><option value="">Tous les états</option>';
+    (DATA.etatOptions||DEFAULT_ETATS).forEach(e=>{
+      html += '<option value="'+escapeHTML(e)+'" '+(etatFilter===e?'selected':'')+'>'+escapeHTML(e)+'</option>';
+    });
+    html += '</select>';
+  }
+  html += '</div>';
+
+  html += '<table><thead><tr>';
+  fields.forEach(f=>{
+    const def = FIELD_DEFS[f];
+    const dir = sort && sort.col===f ? (sort.dir==='asc'?'▲':'▼') : '';
+    html += '<th data-col="'+f+'">'+def.label+' '+dir+'</th>';
+  });
+  html += '<th></th></tr></thead><tbody>';
+
+  if(rows.length===0){
+    html += '<tr class="empty-row"><td colspan="'+(fields.length+1)+'">Aucun document. Cliquez sur « + Ajouter un document » pour commencer.</td></tr>';
+  } else {
+    rows.forEach(r=>{
+      html += '<tr data-id="'+r.id+'">';
+      fields.forEach(f=>{
+        if(f==='reference'){ html += '<td class="ref">'+escapeHTML(r.reference||'')+'</td>'; }
+        else if(f==='etat'){ html += '<td><span class="pill '+etatPillClass(r.etat)+'">'+escapeHTML(r.etat||'—')+'</span></td>'; }
+        else if(f==='echeance'){
+          const d = daysUntil(r.echeance);
+          html += '<td class="'+(d!==null && d<=30 ? 'due-soon':'')+'">'+fmtDate(r.echeance)+'</td>';
+        }
+        else if(f==='commentaire'){ html += '<td>'+escapeHTML((r.commentaire||'').slice(0,80))+((r.commentaire||'').length>80?'…':'')+'</td>'; }
+        else if(f==='pieceJointe'){
+          html += '<td>'+(r.pieceJointe ? '<a href="#" class="download-attach">📎 '+escapeHTML(r.pieceJointe.name)+'</a>' : '<span style="color:var(--ink-soft)">—</span>')+'</td>';
+        }
+        else if(FIELD_DEFS[f] && FIELD_DEFS[f].type==='date'){ html += '<td>'+fmtDate(r[f])+'</td>'; }
+        else { html += '<td>'+escapeHTML(r[f]||'')+'</td>'; }
+      });
+      html += '<td class="actions">';
+      if(cat.rhType){ html += '<button class="btn btn-sm print-row" style="margin-right:4px;">Imprimer</button>'; }
+      html += '<button class="btn btn-sm edit-row">Modifier</button></td>';
+      html += '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function attachTableEvents(cat){
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput){
+    searchInput.oninput = (e)=>{ searchState[cat.id]=e.target.value; content_partial_update(cat); };
+  }
+  const etatSel = document.getElementById('etatFilterSelect');
+  if(etatSel){
+    etatSel.onchange = (e)=>{ filterEtatState[cat.id]=e.target.value; content_partial_update(cat); };
+  }
+  document.querySelectorAll('thead th[data-col]').forEach(th=>{
+    th.onclick = () => {
+      const col = th.getAttribute('data-col');
+      const cur = sortState[cat.id];
+      sortState[cat.id] = { col, dir: (cur && cur.col===col && cur.dir==='asc') ? 'desc' : 'asc' };
+      content_partial_update(cat);
+    };
+  });
+  document.querySelectorAll('tbody tr[data-id]').forEach(tr=>{
+    const id = tr.getAttribute('data-id');
+    tr.querySelector('.edit-row').onclick = () => openRecordModal(cat.id, id);
+    const printBtn = tr.querySelector('.print-row');
+    if(printBtn) printBtn.onclick = () => printRHDocument(cat.id, id);
+    const dlLink = tr.querySelector('.download-attach');
+    if(dlLink) dlLink.onclick = (e) => { e.preventDefault(); downloadAttachment(cat.id, id); };
+  });
+}
+function content_partial_update(cat){
+  document.getElementById('content').innerHTML = renderCategoryTable(cat);
+  attachTableEvents(cat);
+}
+function downloadAttachment(catId, recordId){
+  const rec = (DATA.categories[catId]||[]).find(r=>r.id===recordId);
+  if(!rec || !rec.pieceJointe) return;
+  const a = document.createElement('a');
+  a.href = rec.pieceJointe.dataUrl;
+  a.download = rec.pieceJointe.name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function readFileAsAttachment(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve({ name: file.name, type: file.type, size: file.size, dataUrl: reader.result });
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* =========================================================================
+   FORMULAIRE D'AJOUT / MODIFICATION
+   ========================================================================= */
+function openRecordModal(catId, recordId){
+  editingCategoryId = catId;
+  editingRecordId = recordId;
+  const cat = CAT_BY_ID[catId];
+  const fields = visibleFields(cat);
+  const record = recordId ? DATA.categories[catId].find(r=>r.id===recordId) : {};
+
+  document.getElementById('recordModalTitle').textContent = recordId ? 'Modifier le document' : ('Ajouter un document — ' + cat.label);
+  document.getElementById('deleteRecordBtn').style.display = recordId ? 'inline-flex' : 'none';
+
+  const requiredFields = requiredFieldsFor(cat);
+  let html = '';
+  fields.forEach(f=>{
+    const def = FIELD_DEFS[f];
+    let val = record[f] || '';
+    if(f==='reference' && !recordId && !val){ val = suggestNextReference(catId); }
+    if(f==='dateCreation' && cat.template==='RH' && !recordId && !val){ val = new Date().toISOString().slice(0,10); }
+    const required = requiredFields.includes(f);
+    html += '<div class="field" data-field="'+f+'">';
+    html += '<label>'+def.label+(required?' <span class="req">*</span>':'')+'</label>';
+    if(def.type==='select'){
+      html += '<select data-input="'+f+'">';
+      html += '<option value="">— Sélectionner —</option>';
+      (DATA.etatOptions||DEFAULT_ETATS).forEach(opt=>{
+        html += '<option value="'+escapeHTML(opt)+'" '+(val===opt?'selected':'')+'>'+escapeHTML(opt)+'</option>';
+      });
+      html += '</select>';
+      html += "<div class=\"hint\"><a href=\"#\" onclick=\"addCustomEtat(event)\">+ ajouter une nouvelle valeur d'état</a></div>";
+    } else if(def.type==='select-site'){
+      html += '<select data-input="'+f+'"><option value="">— Sélectionner —</option>';
+      SITES.forEach(s=> html += '<option value="'+s+'" '+(val===s?'selected':'')+'>'+s+'</option>');
+      html += '</select>';
+    } else if(def.type==='select-uo'){
+      html += '<select data-input="'+f+'"><option value="">— Sélectionner —</option>';
+      SITES_UO.forEach(s=> html += '<option value="'+s+'" '+(val===s?'selected':'')+'>'+s+'</option>');
+      html += '</select>';
+    } else if(def.type==='select-employe'){
+      const currentEmp = getCurrentEmploye();
+      if(!recordId && currentEmp){
+        val = currentEmp;
+        html += '<input type="hidden" data-input="'+f+'" value="'+escapeHTML(currentEmp)+'">';
+        html += '<div class="employe-locked">'+escapeHTML(currentEmp)+' <a href="#" onclick="unlockEmployeField(event)">changer</a></div>';
+        html += '<div class="hint">Nom rempli automatiquement (employé connecté sur ce poste). Matricule, fonction et direction sont repris automatiquement sur le document imprimé.</div>';
+      } else {
+        html += '<select data-input="'+f+'"><option value="">— Sélectionner un employé —</option>';
+        EMPLOYES_DG.forEach(e=> html += '<option value="'+escapeHTML(e.nom)+'" '+(val===e.nom?'selected':'')+'>'+escapeHTML(e.nom)+'</option>');
+        html += '</select>';
+        html += '<div class="hint">Matricule, fonction et direction sont pré-enregistrés pour chacun des 6 éléments et seront repris automatiquement sur le document imprimé.</div>';
+      }
+    } else if(def.type==='select-motif'){
+      html += '<select data-input="'+f+'"><option value="">— Sélectionner —</option>';
+      MOTIFS_RH.forEach(m=> html += '<option value="'+escapeHTML(m)+'" '+(val===m?'selected':'')+'>'+escapeHTML(m)+'</option>');
+      html += '</select>';
+    } else if(def.type==='time'){
+      html += '<input type="time" data-input="'+f+'" value="'+escapeHTML(val)+'">';
+    } else if(def.type==='date'){
+      html += '<input type="date" data-input="'+f+'" value="'+escapeHTML(val)+'">';
+    } else if(def.type==='textarea'){
+      html += '<textarea data-input="'+f+'">'+escapeHTML(val)+'</textarea>';
+    } else if(def.type==='file'){
+      html += '<input type="file" data-input="'+f+'" accept="'+(cat.attachAccept||'')+'">';
+      html += '<div class="file-current" data-current-file>'+(val && val.name ? ('📎 '+escapeHTML(val.name)+' <a href="#" class="remove-attach">Retirer</a>') : '')+'</div>';
+      html += '<div class="hint">'+(cat.attachHint||'Pièce jointe')+' — laissez le champ vide pour conserver le fichier actuel.</div>';
+    } else {
+      html += '<input type="text" data-input="'+f+'" class="'+(f==='reference'?'mono':'')+'" value="'+escapeHTML(val)+'">';
+    }
+    if(f==='reference' && !recordId){
+      html += '<div class="hint">Numéro suggéré automatiquement (basé sur le dernier document de ce registre) — modifiable. <a href="#" onclick="regenerateReferenceSuggestion(event,\''+catId+'\')">🔄 Régénérer</a></div>';
+    }
+    html += '<div class="field-error">Ce champ est obligatoire.</div>';
+    html += '</div>';
+  });
+  document.getElementById('recordFormBody').innerHTML = html;
+  document.querySelectorAll('.remove-attach').forEach(a=>{
+    a.onclick = (e) => {
+      e.preventDefault();
+      const wrap = a.closest('.field');
+      wrap.querySelector('[data-current-file]').innerHTML = '';
+      let clearFlag = wrap.querySelector('[data-input-clear]');
+      if(!clearFlag){
+        clearFlag = document.createElement('input');
+        clearFlag.type = 'hidden';
+        clearFlag.setAttribute('data-input-clear', wrap.getAttribute('data-field'));
+        wrap.appendChild(clearFlag);
+      }
+      clearFlag.value = '1';
+    };
+  });
+  document.getElementById('printRecordBtn').style.display = (recordId && cat.rhType) ? 'inline-flex' : 'none';
+  document.getElementById('wordRecordBtn').style.display = (recordId && cat.rhType) ? 'inline-flex' : 'none';
+  document.getElementById('recordOverlay').classList.add('show');
+}
+
+function requiredFieldsFor(cat){
+  if(cat.template === 'RH') return ['reference','employe','motif','dateCreation'];
+  return ['reference','titre'];
+}
+
+function addCustomEtat(evt){
+  evt.preventDefault();
+  const v = prompt("Nouvelle valeur d'état (ex: « En cours de diffusion »)");
+  if(v && v.trim()){
+    if(!DATA.etatOptions) DATA.etatOptions=[...DEFAULT_ETATS];
+    if(!DATA.etatOptions.includes(v.trim())) DATA.etatOptions.push(v.trim());
+    // re-render select
+    const sel = document.querySelector('select[data-input="etat"]');
+    if(sel){
+      const opt = document.createElement('option');
+      opt.value = v.trim(); opt.textContent = v.trim(); opt.selected=true;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+function closeRecordModal(){
+  document.getElementById('recordOverlay').classList.remove('show');
+  editingRecordId = null; editingCategoryId = null;
+}
+
+async function submitRecordForm(){
+  const cat = CAT_BY_ID[editingCategoryId];
+  const fields = visibleFields(cat);
+  const values = {};
+  let valid = true;
+  const requiredFields = requiredFieldsFor(cat);
+  const existingRecord = editingRecordId ? DATA.categories[cat.id].find(r=>r.id===editingRecordId) : null;
+
+  for(const f of fields){
+    if(f === 'pieceJointe'){
+      const fileInput = document.querySelector('[data-input="pieceJointe"]');
+      const clearFlag = document.querySelector('[data-input-clear="pieceJointe"]');
+      const wasCleared = clearFlag && clearFlag.value === '1';
+      if(fileInput && fileInput.files && fileInput.files[0]){
+        const file = fileInput.files[0];
+        if(file.size > 8*1024*1024){
+          const ok = confirm('Ce fichier fait '+(file.size/1024/1024).toFixed(1)+' Mo. Les pièces jointes sont stockées dans le fichier de données partagé : de gros fichiers l\'alourdiront pour tout le monde. Continuer ?');
+          if(!ok) return;
+        }
+        values.pieceJointe = await readFileAsAttachment(file);
+      } else if(wasCleared){
+        values.pieceJointe = null;
+      } else if(existingRecord && existingRecord.pieceJointe){
+        values.pieceJointe = existingRecord.pieceJointe;
+      } else {
+        values.pieceJointe = null;
+      }
+      continue;
+    }
+    const input = document.querySelector('[data-input="'+f+'"]');
+    const v = input.value.trim();
+    values[f] = v;
+    const wrap = document.querySelector('.field[data-field="'+f+'"]');
+    const required = requiredFields.includes(f);
+    if(required && !v){ wrap.classList.add('invalid'); valid=false; }
+    else { wrap.classList.remove('invalid'); }
+  }
+  if(!valid) return;
+
+  if(cat.fixedSite) values.site = cat.fixedSite;
+
+  // vérification de doublon de référence (hors enregistrement en cours d'édition)
+  const dup = (DATA.categories[cat.id]||[]).some(r => r.reference===values.reference && r.id!==editingRecordId);
+  if(dup){
+    const ok = confirm('Une référence identique existe déjà dans ce registre ("'+values.reference+'"). Enregistrer quand même ?');
+    if(!ok) return;
+  }
+
+  if(editingRecordId){
+    const rec = DATA.categories[cat.id].find(r=>r.id===editingRecordId);
+    Object.assign(rec, values);
+    rec.updatedAt = new Date().toISOString();
+  } else {
+    values.id = 'r' + Date.now() + Math.random().toString(36).slice(2,7);
+    values.createdAt = new Date().toISOString();
+    DATA.categories[cat.id].push(values);
+  }
+  closeRecordModal();
+  render();
+  await persistAfterChange();
+}
+
+async function deleteCurrentRecord(){
+  if(!editingRecordId) return;
+  if(!confirm('Supprimer définitivement ce document du registre ?')) return;
+  const cat = CAT_BY_ID[editingCategoryId];
+  DATA.categories[cat.id] = DATA.categories[cat.id].filter(r=>r.id!==editingRecordId);
+  closeRecordModal();
+  render();
+  await persistAfterChange();
+}
+
+/* =========================================================================
+   EXPORT EXCEL
+   ========================================================================= */
+function cellValue(f, r){
+  if(f==='pieceJointe') return r[f] ? r[f].name : '';
+  return r[f] || '';
+}
+function exportCategoryExcel(catId){
+  const cat = CAT_BY_ID[catId];
+  const fields = visibleFields(cat);
+  const rows = (DATA.categories[catId]||[]).map(r=>{
+    const o = {};
+    fields.forEach(f=> o[FIELD_DEFS[f].label] = cellValue(f, r));
+    return o;
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, cat.id.slice(0,31));
+  XLSX.writeFile(wb, cat.label.replace(/[\\/:*?"<>|]/g,'') + '.xlsx');
+}
+
+function exportAllExcel(){
+  const wb = XLSX.utils.book_new();
+  CATEGORIES.forEach(cat=>{
+    const fields = visibleFields(cat);
+    const rows = (DATA.categories[cat.id]||[]).map(r=>{
+      const o = {};
+      fields.forEach(f=> o[FIELD_DEFS[f].label] = cellValue(f, r));
+      return o;
+    });
+    const ws = XLSX.utils.json_to_sheet(rows.length? rows : [Object.fromEntries(fields.map(f=>[FIELD_DEFS[f].label,'']))]);
+    XLSX.utils.book_append_sheet(wb, ws, cat.id.slice(0,31));
+  });
+  XLSX.writeFile(wb, 'registre-documents-export.xlsx');
+}
+
+/* =========================================================================
+   IMPORT AUTOMATIQUE COMPLET (toutes les feuilles en une fois)
+   ========================================================================= */
+function normalizeSheetName(s){
+  return String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
+}
+const SHEET_NAME_TO_CATEGORY = {};
+(function buildSheetMap(){
+  const pairs = {
+    "for":"for", "ce":"ce", "pg":"pg", "mo dg":"modg", "cmsd dg":"cmsddg",
+    "fmp cst":"fmpcst", "fmp org":"fmporg", "fmp stf":"fmpstf", "fmp alg":"fmpalg",
+    "fmp orn":"fmporn", "fmp sba":"fmpsba", "fmp mgm":"fmpmgm", "fmp uos":"fmpuos",
+    "mo systeme":"mosysteme", "mo système":"mosysteme",
+    "attestation de service fait":"attestation", "crr":"crr", "pmp":"pmp", "pdc":"pdc",
+    "moc":"moc", "mop":"mop", "ra":"ra", "ft":"ft", "dr":"dr",
+    "réf pv marché":"pvmarche", "ref pv marché":"pvmarche", "réf pv marche":"pvmarche",
+    "congé":"conge", "conge":"conge",
+    "autorisation de sortie":"sortie", "autorisation d'absence":"absence",
+    "fnc":"fnc", "csc":"csc"
+  };
+  Object.entries(pairs).forEach(([k,v])=> SHEET_NAME_TO_CATEGORY[k]=v);
+})();
+
+const FIELD_KEYWORDS = [
+  ["reference", ["référence","reference"]],
+  ["titre", ["intitulé","intitule","titre"]],
+  ["version", ["version"]],
+  ["etat", ["état","etat"]],
+  ["echeance", ["échéance","echeance"]],
+  ["redacteur", ["rédacteur","redacteur","demandeur"]],
+  ["site", ["site"]],
+  ["uo", ["uo","unité opérationnelle","unite operationnelle","unité","unite"]],
+  ["systeme", ["système","systeme","sys"]],
+  ["equipement", ["équipement","equipement","equi"]],
+  ["dateCreation", ["date de création","date de creation","date","année","annee"]],
+  ["commentaire", ["commentaire"]]
+];
+function guessFieldForHeader(headerText, allowedFields){
+  const h = String(headerText||'').trim().toLowerCase().normalize('NFC');
+  if(!h) return null;
+  for(const [field, keywords] of FIELD_KEYWORDS){
+    if(!allowedFields.includes(field)) continue;
+    if(keywords.some(kw => h.includes(kw))) return field;
+  }
+  return null;
+}
+
+function detectHeaderRowJS(rows){
+  const maxScan = Math.min(rows.length, 15);
+  let best = null; // {score, idx}
+  for(let r=0; r<maxScan; r++){
+    const row = rows[r] || [];
+    const joined = row.map(x=>String(x||'').toLowerCase()).join(' | ');
+    if(joined.includes('site-structure')) continue;
+    if(joined.includes(':') && joined.includes('date')) continue;
+    const nonEmpty = row.filter(x=>String(x||'').trim()!=='').length;
+    if(nonEmpty>=2 && (joined.includes('référence')||joined.includes('reference')||joined.includes('intitulé')||joined.includes('intitule')||joined.includes('titre'))){
+      if(!best || nonEmpty>=best.score){ best = {score:nonEmpty, idx:r}; }
+    }
+  }
+  return best ? best.idx : null;
+}
+
+function triggerBulkImport(){
+  document.getElementById('bulkFileInput').click();
+}
+
+async function handleBulkImportFile(evt){
+  const f = evt.target.files[0];
+  if(!f) return;
+  const buf = await f.arrayBuffer();
+  const wb = XLSX.read(new Uint8Array(buf), {type:'array', cellDates:true});
+
+  const report = { matched:[], unmatchedSheets:[], noHeader:[] };
+
+  wb.SheetNames.forEach(sheetName=>{
+    const norm = normalizeSheetName(sheetName);
+    const catId = SHEET_NAME_TO_CATEGORY[norm];
+    if(!catId){ report.unmatchedSheets.push(sheetName); return; }
+    const cat = CAT_BY_ID[catId];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+    const headerIdx = detectHeaderRowJS(rows);
+    if(headerIdx===null){ report.noHeader.push(sheetName); return; }
+
+    const headers = rows[headerIdx];
+    const allowed = visibleFields(cat);
+    const colMap = {}; // colIndex -> field
+    headers.forEach((h,i)=>{
+      const field = guessFieldForHeader(h, allowed);
+      if(field && !Object.values(colMap).includes(field)) colMap[i] = field;
+    });
+
+    let added = 0, emptyStreak = 0;
+    for(let r=headerIdx+1; r<rows.length && r<headerIdx+3000; r++){
+      const row = rows[r] || [];
+      const isBlank = row.every(x=>String(x||'').trim()==='');
+      if(isBlank){ emptyStreak++; if(emptyStreak>=8) break; continue; }
+      emptyStreak = 0;
+      const rec = { id:'r'+Date.now()+Math.random().toString(36).slice(2,7), createdAt:new Date().toISOString() };
+      Object.entries(colMap).forEach(([idx,field])=>{
+        let v = row[idx];
+        if(v instanceof Date) v = v.toISOString().slice(0,10);
+        rec[field] = v!==undefined? String(v).trim() : '';
+      });
+      // ignore les lignes de sous-titre (ex: "Voie", "Système") : ni référence ni titre renseigné
+      if(!rec.reference && !rec.titre) continue;
+      if(cat.fixedSite) rec.site = cat.fixedSite;
+      DATA.categories[catId].push(rec);
+      added++;
+    }
+    report.matched.push({ catId, label: cat.label, sheetName, added, mapped: Object.values(colMap).map(f=>FIELD_DEFS[f].label) });
+  });
+
+  await persistAfterChange();
+  render();
+  showBulkImportReport(report);
+  evt.target.value = '';
+}
+
+function showBulkImportReport(report){
+  let html = '';
+  const totalAdded = report.matched.reduce((s,m)=>s+m.added,0);
+  html += '<div class="banner ok">'+totalAdded+' document(s) importé(s) au total dans '+report.matched.length+' registre(s).</div>';
+
+  if(report.matched.length){
+    html += '<table style="margin-bottom:14px"><thead><tr><th>Feuille Excel</th><th>Registre</th><th>Documents importés</th></tr></thead><tbody>';
+    report.matched.forEach(m=>{
+      html += '<tr><td>'+escapeHTML(m.sheetName)+'</td><td>'+escapeHTML(m.label)+'</td><td>'+m.added+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  if(report.noHeader.length){
+    html += '<div class="banner warn">En-tête non détecté (feuille ignorée), à importer manuellement via « Importer depuis Excel (feuille par feuille) » : '+report.noHeader.map(escapeHTML).join(', ')+'</div>';
+  }
+  if(report.unmatchedSheets.length){
+    html += '<div class="banner info">Feuilles non reconnues (probablement pas des registres de documents) : '+report.unmatchedSheets.map(escapeHTML).join(', ')+'</div>';
+  }
+  html += '<p class="hint">Vérifiez quelques entrées dans chaque registre pour confirmer que les colonnes sont bien reconnues, puis cliquez sur « Enregistrer » si ce n\u2019est pas déjà fait.</p>';
+
+  document.getElementById('bulkResultBody').innerHTML = html;
+  document.getElementById('bulkResultOverlay').classList.add('show');
+}
+
+
+function openImportModal(){
+  importStep = 1;
+  importWorkbook = null;
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importPreviewZone').innerHTML = '';
+  updateImportStepUI();
+  document.getElementById('importOverlay').classList.add('show');
+}
+function closeImportModal(){
+  document.getElementById('importOverlay').classList.remove('show');
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('importFileInput').addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      importWorkbook = XLSX.read(data, {type:'array', cellDates:true});
+      const sheetSel = document.getElementById('importSheetSelect');
+      sheetSel.innerHTML = importWorkbook.SheetNames.map(n=>'<option value="'+escapeHTML(n)+'">'+escapeHTML(n)+'</option>').join('');
+      const catSel = document.getElementById('importCategorySelect');
+      catSel.innerHTML = CATEGORIES.map(c=>'<option value="'+c.id+'">'+c.label+'</option>').join('');
+      document.getElementById('importNextBtn').disabled = false;
+    };
+    reader.readAsArrayBuffer(f);
+  });
+});
+
+function loadImportPreview(){
+  const sheetName = document.getElementById('importSheetSelect').value;
+  const headerRow = parseInt(document.getElementById('importHeaderRow').value||'1',10);
+  const ws = importWorkbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+  const headerIdx = headerRow-1;
+  const headers = rows[headerIdx] || [];
+  let html = '<table class="preview-table"><thead><tr>';
+  headers.forEach(h=> html += '<th>'+escapeHTML(String(h))+'</th>');
+  html += '</tr></thead><tbody>';
+  rows.slice(headerIdx+1, headerIdx+6).forEach(r=>{
+    html += '<tr>'+headers.map((h,i)=>'<td>'+escapeHTML(String(r[i]||''))+'</td>').join('')+'</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('importPreviewZone').innerHTML = html;
+  window._importPreviewHeaders = headers;
+  window._importPreviewRows = rows.slice(headerIdx+1);
+}
+
+function renderImportMapping(){
+  const headers = window._importPreviewHeaders || [];
+  const catId = document.getElementById('importCategorySelect').value;
+  const cat = CAT_BY_ID[catId];
+  const fields = visibleFields(cat).filter(f => f !== 'pieceJointe');
+  let html = '';
+  headers.forEach((h,i)=>{
+    html += '<div class="map-row">';
+    html += '<div class="col-name">'+escapeHTML(String(h||'(colonne '+(i+1)+')'))+'</div>';
+    html += '<div>→</div>';
+    html += '<select data-map-idx="'+i+'"><option value="">— Ignorer —</option>';
+    fields.forEach(f=> html += '<option value="'+f+'">'+FIELD_DEFS[f].label+'</option>');
+    html += '</select></div>';
+  });
+  document.getElementById('importMappingZone').innerHTML = html || '<p class="hint">Aucune colonne détectée.</p>';
+}
+
+function updateImportStepUI(){
+  document.querySelectorAll('.import-step').forEach(s=>s.classList.remove('show'));
+  document.getElementById('importStep'+importStep).classList.add('show');
+  document.getElementById('importBackBtn').style.display = importStep>1 ? 'inline-flex' : 'none';
+  document.getElementById('importNextBtn').textContent = importStep===3 ? 'Importer les documents' : 'Suivant';
+  document.getElementById('importStepLabel').textContent = 'Étape '+importStep+' sur 3';
+  if(importStep===3) renderImportMapping();
+}
+
+function importGoBack(){ importStep = Math.max(1, importStep-1); updateImportStepUI(); }
+
+function importGoNext(){
+  if(importStep===1){
+    if(!importWorkbook){ alert('Sélectionnez un fichier Excel.'); return; }
+    importStep=2; updateImportStepUI();
+    return;
+  }
+  if(importStep===2){
+    if(!window._importPreviewRows){ alert('Cliquez sur « Prévisualiser » avant de continuer.'); return; }
+    importStep=3; updateImportStepUI();
+    return;
+  }
+  if(importStep===3){
+    const catId = document.getElementById('importCategorySelect').value;
+    const cat = CAT_BY_ID[catId];
+    const mapping = {}; // colIndex -> field
+    document.querySelectorAll('[data-map-idx]').forEach(sel=>{
+      const idx = parseInt(sel.getAttribute('data-map-idx'),10);
+      if(sel.value) mapping[idx]=sel.value;
+    });
+    let added=0;
+    (window._importPreviewRows||[]).forEach(row=>{
+      const isEmpty = row.every(v=>!v || String(v).trim()==='');
+      if(isEmpty) return;
+      const rec = { id:'r'+Date.now()+Math.random().toString(36).slice(2,7), createdAt:new Date().toISOString() };
+      Object.entries(mapping).forEach(([idx,field])=>{
+        let v = row[idx];
+        if(v instanceof Date) v = v.toISOString().slice(0,10);
+        rec[field] = v!==undefined? String(v) : '';
+      });
+      if(cat.fixedSite) rec.site = cat.fixedSite;
+      if(!rec.reference && !rec.titre) return;
+      DATA.categories[catId].push(rec);
+      added++;
+    });
+    closeImportModal();
+    currentCategory = catId;
+    render();
+    persistAfterChange();
+    showBanner('ok', added + ' document(s) importé(s) dans « '+cat.label+' ». Vérifiez les données puis enregistrez.');
+  }
+}
+
+/* =========================================================================
+   IDENTITE — EMPLOYE CONNECTE SUR CE POSTE (préremplissage auto)
+   ========================================================================= */
+function getCurrentEmploye(){
+  try{ return localStorage.getItem('rh_current_employe') || ''; }catch(e){ return ''; }
+}
+function setCurrentEmploye(nom){
+  try{ localStorage.setItem('rh_current_employe', nom||''); }catch(e){}
+}
+function initCurrentEmployeSelect(){
+  const sel = document.getElementById('currentEmployeSelect');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+    EMPLOYES_DG.map(e=>'<option value="'+escapeHTML(e.nom)+'">'+escapeHTML(e.nom)+'</option>').join('');
+  sel.value = getCurrentEmploye();
+  sel.onchange = () => setCurrentEmploye(sel.value);
+}
+function unlockEmployeField(evt){
+  evt.preventDefault();
+  const wrap = document.querySelector('.field[data-field="employe"]');
+  if(!wrap) return;
+  let h = '<label>'+FIELD_DEFS.employe.label+' <span class="req">*</span></label>';
+  h += '<select data-input="employe"><option value="">— Sélectionner un employé —</option>';
+  EMPLOYES_DG.forEach(e=> h += '<option value="'+escapeHTML(e.nom)+'">'+escapeHTML(e.nom)+'</option>');
+  h += '</select>';
+  h += '<div class="hint">Matricule, fonction et direction sont repris automatiquement sur le document imprimé.</div>';
+  h += '<div class="field-error">Ce champ est obligatoire.</div>';
+  wrap.innerHTML = h;
+}
+
+/* =========================================================================
+   IMPRESSION — AUTORISATIONS DE SORTIE / D'ABSENCE
+   ========================================================================= */
+function printRecordFromModal(){
+  if(!editingRecordId || !editingCategoryId) return;
+  printRHDocument(editingCategoryId, editingRecordId);
+}
+
+/* Champs communs déduits d'un enregistrement RH, réutilisés par l'impression
+   HTML et par la génération Word — pour ne jamais laisser les deux diverger. */
+function getRHDocFields(catId, recordId){
+  const cat = CAT_BY_ID[catId];
+  const rec = (DATA.categories[catId]||[]).find(r=>r.id===recordId);
+  if(!cat || !rec) return null;
+  const emp = EMPLOYE_BY_NOM[rec.employe] || { nom: rec.employe||'', matricule:'', fonction:'', direction:'' };
+  const isSortie = cat.rhType === 'sortie';
+  return {
+    cat, rec, emp, isSortie,
+    titre: isSortie ? "AUTORISATION DE SORTIE" : "AUTORISATION D'ABSENCE",
+    uniteLabel: isSortie ? "Site" : "Unité",
+    verbe: isSortie ? "à sortir" : "à s'absenter",
+    heureDebut: splitHeureMinute(rec.heureDebut),
+    heureFin: splitHeureMinute(rec.heureFin),
+    dateAutorisation: rec.dateCreation
+  };
+}
+
+function splitHeureMinute(t){
+  if(!t) return { h:'.......', m:'.......' };
+  const parts = String(t).split(':');
+  return { h: parts[0]||'.......', m: parts[1]||'.......' };
+}
+
+function printRHDocument(catId, recordId){
+  const f = getRHDocFields(catId, recordId);
+  if(!f){ alert('Document introuvable.'); return; }
+  const { rec, emp, titre, uniteLabel, verbe, heureDebut, heureFin, dateAutorisation } = f;
+
+  function fieldLine(label, value){
+    return '<p class="fld"><span class="fld-label">'+escapeHTML(label)+' :</span>'
+      +'<span class="fld-value">'+escapeHTML(value||'')+'</span></p>';
+  }
+
+  function copyBlock(){
+    return ''
+      +'<div class="doc-box">'
+      +'<div class="hdr-row"><span>Réf : '+escapeHTML(rec.reference||'')+'</span>'
+      +'<span>Date : '+fmtDate(rec.dateCreation)+'</span></div>'
+      +'<h2 class="doc-title">'+titre+'</h2>'
+      +'</div>'
+      +fieldLine('Nom et prénom', emp.nom)
+      +fieldLine('Matricule', emp.matricule)
+      +fieldLine('Fonction', emp.fonction)
+      +fieldLine('Direction', emp.direction)
+      +fieldLine(uniteLabel, RH_SITE_FIXE)
+      +'<p class="fld"><span class="fld-label">Est autorisé (e) '+verbe+' le :</span>'
+      +'<span class="fld-value">'+fmtDate(dateAutorisation)+'</span></p>'
+      +'<p class="auth-line">De <b>'+escapeHTML(heureDebut.h)+'</b> h <b>'+escapeHTML(heureDebut.m)+'</b> mn '
+      +'à <b>'+escapeHTML(heureFin.h)+'</b> h <b>'+escapeHTML(heureFin.m)+'</b> mn.</p>'
+      +fieldLine("Motif de l'absence", rec.motif)
+      +'<table class="sig-tbl"><tr>'
+      +'<td>SIGNATURE DE<br>L\'INTERESSE (E)</td>'
+      +'<td>SIGNATURE DU RESPONSABLE<br>HIERARCHIQUE</td>'
+      +'<td>SIGNATURE DE LA<br>STRUCTURE RH</td>'
+      +'</tr><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></table>'
+      +'<p class="disclaimer">Toute impression de ce document constitue une copie NON-CONTRÔLÉE. Seules les versions déposées sur la GED sont en vigueur.</p>';
+  }
+
+  const docHtml = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    +'<link rel="preconnect" href="https://fonts.googleapis.com">'
+    +'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">'
+    +'<title> </title>'
+    +'<style>'
+    +'@page{ size:A4; margin:10mm 16mm 8mm 16mm; }'
+    +'*{ box-sizing:border-box; }'
+    +'body{ font-family:"Inter", "Segoe UI", Arial, sans-serif; color:#0a1930; margin:0; font-size:12.3px; }'
+    +'.band-top{ width:100%; display:block; margin-bottom:4px; }'
+    +'.doc-box{ border:1.3px solid #0a1930; padding:6px 12px 8px 12px; margin:10px 0 16px 0; }'
+    +'.hdr-row{ display:flex; justify-content:space-between; font-size:10.5px; padding-bottom:5px; margin-bottom:5px; border-bottom:1px solid #B7C2CA; }'
+    +'.doc-title{ text-align:center; font-size:14.5px; font-weight:700; letter-spacing:.4px; margin:2px 0 0 0; }'
+    +'.fld{ margin:9px 2px; font-size:12.3px; }'
+    +'.fld-label{ font-weight:700; white-space:nowrap; }'
+    +'.fld-value{ padding:0 2px; }'
+    +'.auth-line{ font-size:12.3px; margin:10px 2px; }'
+    +'.sig-tbl{ width:100%; border-collapse:collapse; margin:16px 0 6px 0; font-size:10px; text-align:center; }'
+    +'.sig-tbl td{ border:1px solid #999; padding:4px; height:46px; vertical-align:top; font-weight:600; }'
+    +'.disclaimer{ font-size:8.5px; color:#7C93A3; font-style:italic; margin:6px 2px 0 2px; }'
+    +'.copy{ padding:2px 2px 6px 2px; }'
+    +'.sep{ border:none; border-top:1px solid #B7C2CA; margin:10px 0; }'
+    +'.print-hint{ position:sticky; top:0; z-index:99; background:#FCF1DD; color:#7A551A; border:1px solid #EAD6AC; border-radius:8px; padding:10px 14px; margin:0 0 14px 0; font-size:12.5px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }'
+    +'.print-hint b{ display:block; margin-bottom:2px; }'
+    +'.print-hint button{ font-family:inherit; font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:6px; border:1px solid #1F6E6A; background:#1F6E6A; color:#fff; cursor:pointer; }'
+    +'@media print{ .print-hint{ display:none !important; } }'
+    +'</style></head><body>'
+    +'<div class="print-hint"><div><b>Avant d\u2019imprimer :</b> dans la fen\u00eatre d\u2019impression, ouvrez \u00ab\u00a0Plus de param\u00e8tres\u00a0\u00bb et d\u00e9sactivez \u00ab\u00a0En-t\u00eates et pieds de page\u00a0\u00bb, sinon le navigateur ajoute une date et un titre en haut de page.</div><button onclick="window.print()">Imprimer</button></div>'
+    +'<img class="band-top" src="'+LETTERHEAD_TOP+'">'
+    +'<div class="copy">'+copyBlock()+'</div>'
+    +'<hr class="sep">'
+    +'<div class="copy">'+copyBlock()+'</div>'
+    +'</body></html>';
+
+  const w = window.open('', '_blank');
+  if(!w){ alert("Le navigateur a bloqué la fenêtre d'impression. Autorisez les pop-ups pour ce site puis réessayez."); return; }
+  w.document.open();
+  w.document.write(docHtml);
+  w.document.close();
+}
+
+/* =========================================================================
+   EXPORT WORD (.docx) — AUTORISATIONS DE SORTIE / D'ABSENCE
+   Reproduit la même mise en page que l'impression, dans un vrai fichier
+   Word natif (docx) éditable/consultable dans Microsoft Word.
+   ========================================================================= */
+function wordRecordFromModal(){
+  if(!editingRecordId || !editingCategoryId) return;
+  generateRHWordDoc(editingCategoryId, editingRecordId);
+}
+
+function base64ToUint8Array(base64){
+  const clean = base64.split(',').pop();
+  const binary = atob(clean);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function loadScriptOnce(src){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = src; s.onload = ()=>resolve(true); s.onerror = ()=>reject(new Error('load failed: '+src));
+    document.head.appendChild(s);
+  });
+}
+
+async function ensureDocxLib(){
+  if(typeof docx !== 'undefined') return true;
+  const fallbacks = [
+    'https://unpkg.com/docx@8.5.0/build/index.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/index.umd.min.js'
+  ];
+  for(const url of fallbacks){
+    try{ await loadScriptOnce(url); if(typeof docx !== 'undefined') return true; }catch(e){ /* essai suivant */ }
+  }
+  return typeof docx !== 'undefined';
+}
+
+async function generateRHWordDoc(catId, recordId){
+  const ready = await ensureDocxLib();
+  if(!ready){ alert("La librairie Word (docx) n'a pas pu être chargée (réseau bloqué ou hors-ligne). Vérifiez votre connexion internet, ou l'accès aux domaines cdn.jsdelivr.net / unpkg.com / cdnjs.cloudflare.com, puis réessayez."); return; }
+  const f = getRHDocFields(catId, recordId);
+  if(!f){ alert('Document introuvable.'); return; }
+  const { rec, emp, titre, uniteLabel, verbe, heureDebut, heureFin, dateAutorisation } = f;
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          BorderStyle, WidthType, AlignmentType, ImageRun, ShadingType } = docx;
+
+  const NOBORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const noBorders = { top:NOBORDER, bottom:NOBORDER, left:NOBORDER, right:NOBORDER,
+                       insideHorizontal:NOBORDER, insideVertical:NOBORDER };
+
+  function fieldPara(label, value){
+    return new Paragraph({ spacing:{ before:130, after:130 },
+      children:[
+        new TextRun({ text: label+' : ', bold:true, size:23 }),
+        new TextRun({ text: value||'', size:23 })
+      ]});
+  }
+
+  function sigCell(text){
+    return new TableCell({ width:{ size:33, type:WidthType.PERCENTAGE }, margins:{ top:80, bottom:80, left:60, right:60 },
+      children:[ new Paragraph({ alignment:AlignmentType.CENTER, children:[ new TextRun({ text, bold:true, size:16, color:'1E2A63' }) ] }),
+                 new Paragraph({ text:'' }), new Paragraph({ text:'' }) ] });
+  }
+
+  function copyBlockChildren(){
+    const children = [];
+    // Boîte d'en-tête : Réf / Date + titre, encadrée
+    children.push(new Table({
+      width:{ size:100, type:WidthType.PERCENTAGE },
+      borders:{ top:{style:BorderStyle.SINGLE,size:8,color:'152A3E'}, bottom:{style:BorderStyle.NONE,size:0,color:'FFFFFF'},
+                left:{style:BorderStyle.SINGLE,size:8,color:'152A3E'}, right:{style:BorderStyle.SINGLE,size:8,color:'152A3E'},
+                insideHorizontal:{style:BorderStyle.NONE,size:0,color:'FFFFFF'}, insideVertical:{style:BorderStyle.NONE,size:0,color:'FFFFFF'} },
+      rows:[ new TableRow({ children:[ new TableCell({ width:{size:100,type:WidthType.PERCENTAGE}, margins:{top:60,bottom:40,left:120,right:120},
+        borders:{ bottom:{style:BorderStyle.SINGLE,size:4,color:'B7C2CA'}, top:{style:BorderStyle.NONE,size:0,color:'FFFFFF'}, left:{style:BorderStyle.NONE,size:0,color:'FFFFFF'}, right:{style:BorderStyle.NONE,size:0,color:'FFFFFF'} },
+        children:[ new Paragraph({ tabStops:[{type:'right', position:9600}],
+          children:[ new TextRun({ text:'Réf : '+(rec.reference||''), size:19 }), new TextRun({ text:'\tDate : '+fmtDate(rec.dateCreation), size:19 }) ] }) ] }) ] }),
+             new TableRow({ children:[ new TableCell({ width:{size:100,type:WidthType.PERCENTAGE}, margins:{top:80,bottom:60,left:120,right:120}, borders:noBorders,
+        children:[ new Paragraph({ alignment:AlignmentType.CENTER, children:[ new TextRun({ text:titre, bold:true, size:29, color:'1E2A63' }) ] }) ] }) ] }) ]
+    }));
+    children.push(new Paragraph({ text:'', spacing:{ after:60 } }));
+    children.push(fieldPara('Nom et prénom', emp.nom));
+    children.push(fieldPara('Matricule', emp.matricule));
+    children.push(fieldPara('Fonction', emp.fonction));
+    children.push(fieldPara('Direction', emp.direction));
+    children.push(fieldPara(uniteLabel, RH_SITE_FIXE));
+    children.push(fieldPara('Est autorisé (e) '+verbe+' le', fmtDate(dateAutorisation)));
+    children.push(new Paragraph({ spacing:{ before:100, after:120 }, children:[
+      new TextRun({ text:'De ', size:23 }), new TextRun({ text:heureDebut.h, bold:true, size:23 }), new TextRun({ text:' h ', size:23 }),
+      new TextRun({ text:heureDebut.m, bold:true, size:23 }), new TextRun({ text:' mn à ', size:23 }),
+      new TextRun({ text:heureFin.h, bold:true, size:23 }), new TextRun({ text:' h ', size:23 }),
+      new TextRun({ text:heureFin.m, bold:true, size:23 }), new TextRun({ text:' mn.', size:23 })
+    ]}));
+    children.push(fieldPara("Motif de l'absence", rec.motif));
+    children.push(new Paragraph({ text:'', spacing:{ before:160 } }));
+    children.push(new Table({ width:{ size:100, type:WidthType.PERCENTAGE },
+      rows:[ new TableRow({ children:[ sigCell("SIGNATURE DE L'INTERESSE (E)"), sigCell('SIGNATURE DU RESPONSABLE HIERARCHIQUE'), sigCell('SIGNATURE DE LA STRUCTURE RH') ] }) ] }));
+    children.push(new Paragraph({ spacing:{ before:120 }, children:[
+      new TextRun({ text:'Toute impression de ce document constitue une copie NON-CONTRÔLÉE. Seules les versions déposées sur la GED sont en vigueur.', italics:true, size:14, color:'7C93A3' })
+    ]}));
+    return children;
+  }
+
+  const docChildren = [];
+  try{
+    const imgBytes = base64ToUint8Array(LETTERHEAD_TOP);
+    docChildren.push(new Paragraph({ children:[ new ImageRun({ type:'jpg', data:imgBytes, transformation:{ width:520, height:90 } }) ] }));
+  }catch(e){ /* logo indisponible : on continue sans bloquer l'export */ }
+
+  docChildren.push(...copyBlockChildren());
+  docChildren.push(new Paragraph({ border:{ bottom:{ style:BorderStyle.SINGLE, size:3, color:'B7C2CA', space:6 } }, text:'' }));
+  docChildren.push(...copyBlockChildren());
+
+  const doc = new Document({
+    styles:{ default:{ document:{ run:{ font:'Inter' } } } },
+    sections:[{ properties:{ page:{ size:{ width:11906, height:16838 }, margin:{ top:600, bottom:500, left:900, right:900 } } }, children: docChildren }]
+  });
+
+  try{
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeNom = (emp.nom||'document').replace(/[^\p{L}\p{N}]+/gu,'_');
+    a.href = url; a.download = (f.cat.rhCode||titre)+'_'+safeNom+'.docx';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }catch(e){
+    alert("Erreur lors de la génération du fichier Word : "+e.message);
+  }
+}
+
+/* =========================================================================
+   UTILITAIRES
+   ========================================================================= */
+function escapeHTML(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* input caché pour import JSON manuel (navigateurs sans File System Access API) */
+const jsonInput = document.createElement('input');
+jsonInput.type='file'; jsonInput.accept='.json'; jsonInput.id='jsonImportInput'; jsonInput.style.display='none';
+jsonInput.addEventListener('change', handleManualJSONImport);
+document.body.appendChild(jsonInput);
+
+const bulkInput = document.createElement('input');
+bulkInput.type='file'; bulkInput.accept='.xlsx,.xls'; bulkInput.id='bulkFileInput'; bulkInput.style.display='none';
+bulkInput.addEventListener('change', handleBulkImportFile);
+document.body.appendChild(bulkInput);
+
+/* =========================================================================
+   INITIALISATION
+   ========================================================================= */
+render();
+initCurrentEmployeSelect();
+tryAutoReconnect();
+</script>
+</body>
+</html>

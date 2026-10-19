@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Consolidation Rapports UO — SETRAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #f7f9fc;
+    --panel: #ffffff;
+    --ink: #0a1930;
+    --ink-soft: #44537a;
+    --line: #e2e8f4;
+    --accent: #2f6690;
+    --accent-dark: #24537a;
+    --accent-soft: #e4edf3;
+    --amber: #f0b429;
+    --amber-soft: #fdf1e2;
+    --red: #d6455a;
+    --red-soft: #fbe9ec;
+    --green: #1f9d6f;
+    --green-soft: #e2f7ee;
+    --blue: #2f80c9;
+    --blue-soft: #e5f1fb;
+    --radius: 8px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;}
+  header.topbar{
+    background: linear-gradient(135deg, #0a1930 20%, #2f6690 100%);
+    border-bottom:4px solid var(--accent);
+    color:#fff;
+    padding:12px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    position:sticky;top:0;z-index:20;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  header.topbar .brand{display:flex;align-items:center;gap:10px;}
+  header.topbar .brand .rail{
+    width:26px;height:26px;border-radius:50%;
+    background:repeating-linear-gradient(45deg, #fff 0 3px, transparent 3px 6px);
+    border:2px solid #fff;
+    flex:none;
+  }
+  header.topbar h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px;}
+  header.topbar .sub{font-size:11px;opacity:.75;margin-top:1px;}
+  .role-chip{
+    background:rgba(255,255,255,.12);
+    padding:6px 12px;border-radius:20px;
+    font-size:12.5px; display:flex; align-items:center; gap:8px;
+  }
+  .role-chip button{
+    background:none;border:1px solid rgba(255,255,255,.4);color:#fff;
+    border-radius:14px;padding:2px 9px;font-size:11px;cursor:pointer;
+  }
+  .role-chip button:hover{background:rgba(255,255,255,.15);}
+  main{max-width:1280px;margin:0 auto;padding:20px;}
+  .banner{
+    padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  }
+  .banner.warn{background:var(--amber-soft);color:#7a5308;border:1px solid #f0d9a6;}
+  .banner.ok{background:var(--green-soft);color:#1f5c37;border:1px solid #bfe3cc;}
+  .banner button, .btn{
+    border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;
+    font-weight:600;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-outline{background:#fff;border:1px solid var(--line)!important;color:var(--ink);}
+  .btn-outline:hover{background:#f0f3f5;}
+  .btn-ghost{background:transparent;color:var(--accent-dark);padding:6px 8px;}
+  .btn-ghost:hover{text-decoration:underline;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* ROLE SELECT SCREEN */
+  .role-screen{
+    max-width:680px;margin:60px auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;padding:40px;text-align:center;
+    box-shadow:0 20px 50px -24px rgba(10,25,48,.18);
+  }
+  .role-screen h2{margin-top:0;font-size:21px;font-weight:700;letter-spacing:-.01em;}
+  .role-screen p{color:var(--ink-soft);font-size:13.5px;}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px;text-align:left;}
+  .role-card{
+    position:relative;
+    border:1px solid var(--line);border-radius:14px;padding:15px 16px 15px 46px;cursor:pointer;background:#fff;
+    transition:transform .15s, border-color .15s, box-shadow .15s, background .15s;
+  }
+  .role-card::before{
+    content:"";position:absolute;left:16px;top:17px;width:20px;height:20px;border-radius:7px;
+    background:linear-gradient(160deg, var(--accent-soft) 0%, #fff 100%);
+    border:1px solid var(--line);
+  }
+  .role-card:hover{
+    border-color:var(--accent);background:var(--accent-soft);
+    transform:translateY(-2px);
+    box-shadow:0 12px 24px -14px rgba(47,102,144,.35);
+  }
+  .role-card:hover::before{background:var(--accent);border-color:var(--accent);}
+  .role-card .t{font-weight:650;font-size:13.5px;}
+  .role-card .d{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+  /* FILTER BAR */
+  .filterbar{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:16px;
+  }
+  .filterbar label{font-size:11.5px;color:var(--ink-soft);display:block;margin-bottom:3px;}
+  .filterbar select, .filterbar input{
+    border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;background:#fff;color:var(--ink);
+  }
+  .filterbar .spacer{flex:1;}
+
+  /* TABLE */
+  table.reports{width:100%;border-collapse:collapse;background:var(--panel);border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);}
+  table.reports th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);
+    padding:10px 12px;border-bottom:1px solid var(--line);background:#fafcfc;
+  }
+  table.reports td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle;}
+  table.reports tr:last-child td{border-bottom:none;}
+  table.reports tr.rowhover:hover{background:#f7fafa;cursor:pointer;}
+  .uo-tag{
+    display:inline-block;background:var(--blue-soft);color:var(--blue);font-weight:700;
+    border-radius:5px;padding:2px 7px;font-size:11.5px;letter-spacing:.03em;
+  }
+  .dot{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:12px;}
+  .dot.done{background:var(--green-soft);color:var(--green);}
+  .dot.pending{background:#eef1f3;color:#9aa7ae;}
+  .dot.mine{box-shadow:0 0 0 2px var(--accent) inset;}
+  .badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;}
+  .badge.new{background:#eef1f3;color:#657079;}
+  .badge.progress{background:var(--amber-soft);color:var(--amber);}
+  .badge.analysed{background:var(--blue-soft);color:var(--blue);}
+  .badge.validated{background:var(--green-soft);color:var(--green);}
+  .badge.sent{background:var(--accent-soft);color:var(--accent-dark);}
+  .badge.retour{background:#f3e6fb;color:#7a3fa0;}
+  .badge.cloture{background:#dceee0;color:#1f5c37;}
+  .badge.retard-ok{background:var(--green-soft);color:var(--green);}
+  .badge.retard-late{background:var(--red-soft);color:var(--red);}
+  .badge.retard-warn{background:var(--amber-soft);color:var(--amber);}
+  .badge.retard-pending{background:#eef1f3;color:#657079;}
+  .type-tag{display:inline-block;background:#f0e9d8;color:#8a6a1a;font-weight:700;border-radius:5px;padding:2px 7px;font-size:11px;letter-spacing:.02em;}
+  .retard-banner{border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;}
+  .retard-banner.envoi{background:var(--amber-soft);border:1px solid #f0d9a6;}
+  .retard-banner.traitement{background:var(--red-soft);border:1px solid #f0c4bd;}
+  .retard-banner h4{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:6px;}
+  .retard-banner.envoi h4{color:var(--amber);}
+  .retard-banner.traitement h4{color:var(--red);}
+  .retard-banner ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .retard-banner li{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12.5px;cursor:pointer;}
+  .retard-banner.envoi li{border-color:#f0d9a6;}
+  .retard-banner.traitement li{border-color:#f0c4bd;}
+  .retard-banner li:hover{filter:brightness(0.98);}
+  .retard-banner li .lbl{display:flex;align-items:center;gap:8px;}
+  .sortable-th{cursor:pointer;user-select:none;}
+  .sortable-th:hover{color:var(--ink);}
+  .sortable-th .arrow{font-size:9px;margin-left:3px;opacity:.7;}
+  .att-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;margin-bottom:6px;font-size:12.5px;background:#fafcfc;}
+  .att-item .left{display:flex;align-items:center;gap:8px;min-width:0;}
+  .att-item .fn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;}
+  .att-item .meta2{color:var(--ink-soft);font-size:11px;}
+  .att-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+  .att-tag.word{background:var(--blue-soft);color:var(--blue);}
+  .att-tag.excel{background:var(--green-soft);color:var(--green);}
+  .att-tag.retour{background:#f3e6fb;color:#7a3fa0;}
+  .att-tag.autre{background:#eef1f3;color:#657079;}
+  .retour-block{background:#f8f2fc;border:1px solid #e3cdf2;border-radius:8px;padding:12px 14px;margin-top:14px;}
+  .retour-block h4{margin:0 0 8px;font-size:13px;color:#7a3fa0;}
+  .retour-sub{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+  .retour-sub .rtag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:8px;}
+  .retour-sub .rtag.valide{background:var(--green-soft);color:var(--green);}
+  .retour-sub .rtag.encours{background:var(--amber-soft);color:var(--amber);}
+  .retour-sub .rtag.en_attente{background:#eef1f3;color:#657079;}
+  .empty-state{
+    text-align:center;padding:50px 20px;color:var(--ink-soft);
+  }
+
+  /* DIALOG */
+  dialog{
+    border:none;border-radius:12px;padding:0;max-width:720px;width:92vw;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  dialog::backdrop{background:rgba(15,25,30,.45);}
+  .dlg-head{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;}
+  .dlg-head h3{margin:0;font-size:16px;}
+  .dlg-head .meta{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .dlg-body{padding:18px 22px;max-height:65vh;overflow-y:auto;}
+  .dlg-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select, .field textarea{
+    width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;font-family:inherit;color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:80px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .close-x{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);line-height:1;}
+  .close-x:hover{color:var(--ink);}
+
+  .domain-block{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;}
+  .domain-block .dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .domain-block .dh .name{font-weight:700;font-size:13px;}
+  .domain-block .dh .who{font-size:11.5px;color:var(--ink-soft);}
+  .domain-block .readonly-text{white-space:pre-wrap;font-size:13px;color:var(--ink);}
+  .domain-block .readonly-text.empty{color:#a3adb3;font-style:italic;}
+  .prio{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:8px;}
+  .prio.faible{background:#eef1f3;color:#657079;}
+  .prio.moyenne{background:var(--amber-soft);color:var(--amber);}
+  .prio.critique{background:var(--red-soft);color:var(--red);}
+
+  .synth-box{background:var(--accent-soft);border:1px solid #bcdfdb;border-radius:8px;padding:12px 14px;}
+  .synth-box h4{margin:0 0 8px;font-size:13px;color:var(--accent-dark);}
+  .retard-justif-box{background:var(--red-soft);border:1px solid #f0c4bd;border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+  .retard-justif-box h4{margin:0 0 8px;font-size:13px;color:var(--red);}
+  .retard-justif-box select{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;font-family:inherit;color:var(--ink);}
+  .retard-justif-box textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13.5px;font-family:inherit;color:var(--ink);margin-top:8px;resize:vertical;}
+  .retard-justif-box.readonly{background:#fbf5f4;}
+  .retard-justif-box .hint{font-size:11px;color:var(--ink-soft);margin-top:8px;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:6px;}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+  .stat-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .stat-card .n{font-size:22px;font-weight:700;}
+  .stat-card .l{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  footer.tip{max-width:1280px;margin:24px auto 40px;padding:0 20px;font-size:11.5px;color:var(--ink-soft);}
+  @media (max-width:720px){
+    .stats-row{grid-template-columns:1fr 1fr;}
+    .grid2{grid-template-columns:1fr;}
+    .role-grid{grid-template-columns:1fr;}
+    table.reports thead{display:none;}
+    table.reports, table.reports tbody, table.reports tr, table.reports td{display:block;width:100%;}
+    table.reports tr{border-bottom:6px solid var(--bg);padding:8px 0;}
+  }
+
+/* ===== Ambient background — shared across the whole site (source: Suivi des Performances) ===== */
+.bg-balls{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ball{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform;}
+.ball-1{width:400px;height:400px;background:radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);top:-120px;left:100px;animation:blob-drift-1 28s ease-in-out infinite;}
+.ball-2{width:320px;height:320px;background:radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);top:20%;right:-80px;animation:blob-drift-2 34s ease-in-out infinite;}
+.ball-3{width:300px;height:300px;background:radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);bottom:10%;left:8%;animation:blob-drift-3 38s ease-in-out infinite;}
+.ball-4{width:280px;height:280px;background:radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);top:52%;right:25%;animation:blob-drift-4 30s ease-in-out infinite;}
+@keyframes blob-drift-1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}25%{transform:translate(60px,80px) scale(1.08) rotate(3deg);}50%{transform:translate(-30px,120px) scale(.96) rotate(-2deg);}75%{transform:translate(80px,40px) scale(1.05) rotate(1deg);}}
+@keyframes blob-drift-2{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(-80px,60px) scale(1.1);}66%{transform:translate(-50px,100px) scale(.93);}}
+@keyframes blob-drift-3{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}40%{transform:translate(70px,-60px) scale(1.07) rotate(-4deg);}80%{transform:translate(110px,-90px) scale(.94) rotate(2deg);}}
+@keyframes blob-drift-4{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,50px) scale(1.12);}}
+@media (prefers-reduced-motion: reduce){.ball{animation:none !important;}}
+/* .bg-balls is position:fixed with z-index:0, which by CSS stacking rules
+   can render ABOVE plain unpositioned content — this forces every other
+   direct child of body to stack above it regardless of the page's own
+   wrapper class names. */
+body > *:not(.bg-balls){position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<div class="bg-balls" aria-hidden="true"><div class="ball ball-1"></div><div class="ball ball-2"></div><div class="ball ball-3"></div><div class="ball ball-4"></div></div>
+
+
+<header class="topbar">
+  <div class="brand">
+    <div class="rail"></div>
+    <div>
+      <h1>Suivi Consolidation — Rapports d'Activité UO</h1>
+      <div class="sub">SETRAM · Direction Générale</div>
+    </div>
+  </div>
+  <div id="roleChipZone"></div>
+</header>
+
+<main id="app"></main>
+
+<footer class="tip" id="footerTip"></footer>
+
+<dialog id="reportDialog"></dialog>
+<dialog id="newReportDialog"></dialog>
+<dialog id="identitesDialog"></dialog>
+
+<script>
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const UOS = ["ALG","ORN","CST","SBA","ORG","STF","MGM"];
+const DOMAINES = [
+  {id:"cfa",         label:"CFA"},
+  {id:"cfo",         label:"CFO"},
+  {id:"elm",         label:"ELM"},
+  {id:"lac",         label:"LAC"},
+  {id:"bo",          label:"BO"},
+  {id:"voie",        label:"VOIE"},
+  {id:"billettique", label:"Billettique"}
+];
+const ROLES = [
+  {id:"ing_cfa_bill",   label:"Ingénieur CFA / Billettique",  type:"ingenieur",   systemes:["cfa","billettique"],  desc:"Analyse et remarques sur les systèmes CFA et Billettique, toutes UO"},
+  {id:"ing_cfo",        label:"Ingénieur CFO",               type:"ingenieur",   systemes:["cfo"],                desc:"Analyse et remarques sur le système CFO, toutes UO"},
+  {id:"ing_elm_lac_bo", label:"Ingénieur ELM / LAC / BO",     type:"ingenieur",   systemes:["elm","lac","bo"],     desc:"Analyse et remarques sur les systèmes ELM, LAC et BO, toutes UO"},
+  {id:"ing_voie",       label:"Ingénieur VOIE",               type:"ingenieur",   systemes:["voie"],               desc:"Analyse et remarques sur le système VOIE, toutes UO"},
+  {id:"resp1",     label:"Responsable d'Ingénierie de la Maintenance", type:"responsable", desc:"Consolidation et validation avant envoi vers l'UO"},
+  {id:"resp2",     label:"Responsable SDF",             type:"responsable", desc:"Consolidation et validation avant envoi vers l'UO"},
+  {id:"directeur", label:"Directeur",                 type:"directeur",   desc:"Vue globale en lecture, suivi des délais"}
+];
+
+/* Types de rapport et échéance réglementaire d'envoi.
+   L'échéance tombe le "deadlineDay" du mois qui suit la fin de la période :
+   - Mensuel     : le 05 du mois suivant
+   - Trimestriel : le 06 du mois suivant la fin du trimestre
+   - Semestriel  : le 07 du mois suivant la fin du semestre
+   - Annuel      : le 08 janvier de l'année suivante */
+const REPORT_TYPES = [
+  {id:"mensuel",     label:"Mensuel",     deadlineDay:5},
+  {id:"trimestriel", label:"Trimestriel", deadlineDay:6},
+  {id:"semestriel",  label:"Semestriel",  deadlineDay:7},
+  {id:"annuel",      label:"Annuel",      deadlineDay:8}
+];
+function reportTypeObj(typeId){
+  return REPORT_TYPES.find(t=>t.id===typeId) || REPORT_TYPES[0];
+}
+
+const STATUT_LABELS = {
+  nouveau:{label:"Nouveau", cls:"new"},
+  encours:{label:"En cours", cls:"progress"},
+  analyse:{label:"Analysé", cls:"analysed"},
+  valide:{label:"Validé", cls:"validated"},
+  envoye:{label:"Envoyé UO", cls:"sent"},
+  retour_uo:{label:"Retour UO", cls:"retour"},
+  cloture:{label:"Clôturé", cls:"cloture"}
+};
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let state = {
+  role: null,
+  rootHandle: null,
+  dirs: {},
+  roleConfig: {},
+  adminPassword: null,
+  notifEnabled: false,
+  notifTimer: null,
+  notifSeenIds: new Set(),
+  pendingOpenReportId: new URLSearchParams(window.location.search).get("report") || null,
+  reports: [],
+  remarks: [],
+  consolidations: [],
+  attachments: [],
+  retours: [],
+  retourReponses: [],
+  filter: { uo:"", periode:"", statut:"", type:"", q:"" },
+  sortBy: "periode",   // "periode" | "envoi" | "traitement"
+  sortDir: "desc",     // "asc" | "desc"
+  connected: false
+};
+
+const MAX_ROUNDS = 3;
+
+const fsSupported = "showDirectoryPicker" in window;
+
+/* =========================================================
+   INDEXEDDB — persist directory handle across sessions
+   ========================================================= */
+function idbOpen(){
+  return new Promise((res, rej)=>{
+    const req = indexedDB.open("suivi-uo-fs", 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore("handles");
+    req.onsuccess = ()=> res(req.result);
+    req.onerror = ()=> rej(req.error);
+  });
+}
+async function idbSet(key, val){
+  const db = await idbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction("handles","readwrite");
+    tx.objectStore("handles").put(val, key);
+    tx.oncomplete = ()=>res();
+    tx.onerror = ()=>rej(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction("handles","readonly");
+    const r = tx.objectStore("handles").get(key);
+    r.onsuccess = ()=>res(r.result || null);
+    r.onerror = ()=>rej(r.error);
+  });
+}
+
+/* =========================================================
+   FILE SYSTEM HELPERS
+   ========================================================= */
+async function ensureSubdir(root, name){
+  return await root.getDirectoryHandle(name, {create:true});
+}
+async function listEntities(dirHandle){
+  const out = [];
+  for await (const [name, handle] of dirHandle.entries()){
+    if (handle.kind === "file" && name.endsWith(".json")){
+      try{
+        const file = await handle.getFile();
+        const text = await file.text();
+        out.push(JSON.parse(text));
+      }catch(e){ console.warn("Fichier ignoré (corrompu):", name, e); }
+    }
+  }
+  return out;
+}
+async function writeEntity(dirHandle, id, obj){
+  const fh = await dirHandle.getFileHandle(id + ".json", {create:true});
+  const w = await fh.createWritable();
+  await w.write(JSON.stringify(obj, null, 2));
+  await w.close();
+}
+
+async function connectFolder(){
+  try{
+    const handle = await window.showDirectoryPicker();
+    await idbSet("root", handle);
+    await afterConnect(handle);
+  }catch(e){
+    if (e && e.name === "AbortError") return; // l'utilisateur a fermé la fenêtre de sélection, rien à signaler
+    console.error("Échec de la connexion au dossier partagé :", e);
+    alert(
+      "La connexion au dossier partagé a échoué (" + (e && e.name ? e.name : "erreur inconnue") + ").\n\n" +
+      "Vérifiez que cette page est bien ouverte dans son propre onglet (pas dans un cadre/iframe) " +
+      "et que le dossier partagé est accessible depuis votre poste."
+    );
+  }
+}
+async function tryReconnect(){
+  const handle = await idbGet("root");
+  if (!handle) return false;
+  try{
+    const perm = await handle.queryPermission({mode:"readwrite"});
+    if (perm === "granted"){
+      await afterConnect(handle);
+      return true;
+    }
+    // needs a user gesture to re-request; show button
+    state.rootHandle = handle;
+    return false;
+  }catch(e){
+    console.error("Échec de la reconnexion automatique au dossier partagé :", e);
+    return false;
+  }
+}
+async function requestPermissionAgain(){
+  if (!state.rootHandle) return;
+  try{
+    const perm = await state.rootHandle.requestPermission({mode:"readwrite"});
+    if (perm === "granted") await afterConnect(state.rootHandle);
+    else render();
+  }catch(e){
+    console.error("Échec de la demande d'autorisation sur le dossier partagé :", e);
+    alert(
+      "Impossible d'obtenir l'autorisation sur le dossier partagé.\n\n" +
+      "Cause probable : le dossier/serveur n'est pas accessible en ce moment " +
+      "(lecteur réseau non monté, VPN coupé, serveur éteint, ou dossier déplacé/renommé).\n\n" +
+      "Vérifiez que le dossier partagé est bien accessible depuis votre poste, " +
+      "puis cliquez sur « Reconnecter le dossier » pour le sélectionner à nouveau."
+    );
+    // Le handle mémorisé est peut-être invalide : on repasse en mode
+    // "aucun dossier connecté" pour proposer une reconnexion complète.
+    state.rootHandle = null;
+    render();
+  }
+}
+async function afterConnect(handle){
+  state.rootHandle = handle;
+  state.dirs.reports = await ensureSubdir(handle, "reports");
+  state.dirs.remarks = await ensureSubdir(handle, "remarks");
+  state.dirs.consolidations = await ensureSubdir(handle, "consolidations");
+  state.dirs.attachments = await ensureSubdir(handle, "attachments");
+  state.dirs.fichiers = await ensureSubdir(handle, "fichiers");
+  state.dirs.retours = await ensureSubdir(handle, "retours");
+  state.dirs.retourReponses = await ensureSubdir(handle, "retourReponses");
+  state.dirs.config = await ensureSubdir(handle, "config");
+  state.connected = true;
+  await refreshAll();
+}
+async function refreshAll(){
+  if (!state.connected) return;
+  state.reports = await listEntities(state.dirs.reports);
+  state.remarks = await listEntities(state.dirs.remarks);
+  state.consolidations = await listEntities(state.dirs.consolidations);
+  state.attachments = await listEntities(state.dirs.attachments);
+  // Migration : les anciens retours (version mono-round) étaient enregistrés
+  // sous le nom {reportId}.json sans champ "round" ni "id" propre.
+  const rawRetours = await listEntities(state.dirs.retours);
+  state.retours = rawRetours.map(r => ({...r, round: r.round || 1, id: r.id || r.reportId}));
+  state.retourReponses = await listEntities(state.dirs.retourReponses);
+  await loadRoleConfig();
+  await loadAdminPassword();
+  render();
+}
+
+/* =========================================================
+   IDENTITÉS DES RÔLES (nom réel + code PIN facultatif par poste)
+   Stocké dans config/identites.json sur le dossier partagé,
+   donc visible et cohérent pour tout le monde.
+   ========================================================= */
+async function loadRoleConfig(){
+  try{
+    const fh = await state.dirs.config.getFileHandle("identites.json");
+    const file = await fh.getFile();
+    state.roleConfig = JSON.parse(await file.text());
+  }catch(e){
+    state.roleConfig = state.roleConfig || {};
+  }
+}
+async function saveRoleConfig(){
+  const fh = await state.dirs.config.getFileHandle("identites.json", {create:true});
+  const w = await fh.createWritable();
+  await w.write(JSON.stringify(state.roleConfig, null, 2));
+  await w.close();
+}
+function personName(role){
+  const c = state.roleConfig && state.roleConfig[role.id];
+  return (c && c.nom && c.nom.trim()) ? c.nom.trim() : null;
+}
+function displayName(role){
+  const n = personName(role);
+  return n ? `${n} (${role.label})` : role.label;
+}
+
+/* Mot de passe administrateur — stocké dans config/admin.json sur le
+   dossier partagé. Valeur par défaut tant qu'il n'a jamais été changé. */
+const DEFAULT_ADMIN_PASSWORD = "ADMIN2026";
+async function loadAdminPassword(){
+  try{
+    const fh = await state.dirs.config.getFileHandle("admin.json");
+    const file = await fh.getFile();
+    const data = JSON.parse(await file.text());
+    state.adminPassword = data.password || DEFAULT_ADMIN_PASSWORD;
+  }catch(e){
+    state.adminPassword = DEFAULT_ADMIN_PASSWORD;
+  }
+}
+async function saveAdminPassword(newPassword){
+  const fh = await state.dirs.config.getFileHandle("admin.json", {create:true});
+  const w = await fh.createWritable();
+  await w.write(JSON.stringify({password:newPassword}, null, 2));
+  await w.close();
+  state.adminPassword = newPassword;
+}
+
+/* =========================================================
+   DOMAIN LOGIC
+   ========================================================= */
+function remarksFor(reportId){
+  return state.remarks.filter(r => r.reportId === reportId);
+}
+function remarkFor(reportId, domaine){
+  return state.remarks.find(r => r.reportId === reportId && r.domaine === domaine) || null;
+}
+function consolFor(reportId){
+  return state.consolidations.find(c => c.reportId === reportId) || null;
+}
+function roundsFor(reportId){
+  return state.retours.filter(r => r.reportId === reportId).sort((a,b)=>a.round-b.round);
+}
+function currentRound(reportId){
+  const rounds = roundsFor(reportId);
+  return rounds.length ? rounds[rounds.length-1] : null;
+}
+function attachmentsFor(reportId, category, round){
+  return state.attachments.filter(a =>
+    a.reportId === reportId &&
+    (!category || a.category === category) &&
+    (round === undefined || (a.round || 1) === round)
+  );
+}
+/* Réponse d'un ingénieur à un round donné, avec repli sur les anciennes
+   données (avant l'introduction des rounds) stockées directement sur la remarque. */
+function retourReponseFor(reportId, domaine, round){
+  const found = state.retourReponses.find(r => r.reportId===reportId && r.domaine===domaine && r.round===round);
+  if (found) return found;
+  if (round === 1){
+    const rm = remarkFor(reportId, domaine);
+    if (rm && rm.statutRetour){
+      return {reportId, domaine, round:1, statutRetour: rm.statutRetour, commentaire: rm.commentaireRetour, auteur: rm.auteur, updatedAt: rm.dateRetourReponse, id: rm.id};
+    }
+  }
+  return null;
+}
+function reportStatut(report){
+  const rs = remarksFor(report.id).filter(r => r.texte && r.texte.trim());
+  const nbDomaines = rs.length;
+  const consol = consolFor(report.id);
+  const cRound = currentRound(report.id);
+  if (cRound){
+    // L'action du responsable (valider/envoyer la synthèse) prime sur l'état
+    // des positions des ingénieurs : le responsable peut valider et envoyer
+    // même si tous les ingénieurs n'ont pas encore répondu.
+    if (cRound.syntheseStatut === "envoye") return "envoye";
+    if (cRound.syntheseStatut === "valide") return "valide";
+    const aucuneReponse = rs.length > 0 && rs.every(r => !retourReponseFor(report.id, r.domaine, cRound.round));
+    if (aucuneReponse) return "retour_uo";
+    const allResolved = rs.length > 0 && rs.every(r => {
+      const resp = retourReponseFor(report.id, r.domaine, cRound.round);
+      return resp && resp.statutRetour === "valide";
+    });
+    return allResolved ? "cloture" : "analyse";
+  }
+  if (consol && consol.statut === "envoye") return "envoye";
+  if (consol && consol.statut === "valide") return "valide";
+  if (nbDomaines === DOMAINES.length) return "analyse";
+  if (nbDomaines > 0) return "encours";
+  return "nouveau";
+}
+function fmtDate(d){
+  if (!d) return "—";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString("fr-FR");
+}
+const MOIS_ABR = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
+
+/* Affiche une période selon son type. "p" est stocké sous l'un des formats :
+   mensuel: "YYYY-MM" · trimestriel: "YYYY-TQ" · semestriel: "YYYY-SS" · annuel: "YYYY" */
+function fmtPeriode(p, typeId){
+  if (!p) return "—";
+  typeId = typeId || "mensuel";
+  if (typeId === "trimestriel"){
+    const [y,q] = p.split("-T");
+    return "T" + q + " " + y;
+  }
+  if (typeId === "semestriel"){
+    const [y,s] = p.split("-S");
+    return "S" + s + " " + y;
+  }
+  if (typeId === "annuel"){
+    return p;
+  }
+  const [y,m] = p.split("-");
+  return MOIS_ABR[parseInt(m,10)-1] + " " + y;
+}
+
+/* Retourne {year, month} (month = 1-12) du dernier mois couvert par la période. */
+function periodeEndYearMonth(p, typeId){
+  typeId = typeId || "mensuel";
+  if (typeId === "trimestriel"){
+    const [y,q] = p.split("-T");
+    return {year: parseInt(y,10), month: parseInt(q,10)*3};
+  }
+  if (typeId === "semestriel"){
+    const [y,s] = p.split("-S");
+    return {year: parseInt(y,10), month: parseInt(s,10)===1 ? 6 : 12};
+  }
+  if (typeId === "annuel"){
+    return {year: parseInt(p,10), month: 12};
+  }
+  const [y,m] = p.split("-");
+  return {year: parseInt(y,10), month: parseInt(m,10)};
+}
+
+/* Date limite réglementaire d'envoi du rapport à la DG (Date locale, minuit). */
+function getDeadlineDate(report){
+  if (!report.periode) return null;
+  const typeId = report.type || "mensuel";
+  const {year, month} = periodeEndYearMonth(report.periode, typeId);
+  const day = reportTypeObj(typeId).deadlineDay;
+  let dY = year, dM = month + 1; // mois suivant la fin de la période
+  if (dM > 12){ dM = 1; dY += 1; }
+  return new Date(dY, dM - 1, day);
+}
+
+function daysBetween(a, b){
+  const MS = 24*60*60*1000;
+  const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((da - db) / MS);
+}
+
+/* =========================================================
+   DÉLAIS ET RETARDS
+   Deux notions bien distinctes :
+   1) DÉLAI D'ENVOI : l'UO doit envoyer son rapport à la DG avant l'échéance
+      réglementaire (05/06/07/08 selon le type). On compare la date de
+      réception (= date d'envoi par l'UO) à cette échéance.
+   2) RETARD DE TRAITEMENT : une fois le rapport reçu, la DG (ingénieurs +
+      responsable) doit le traiter et le renvoyer à l'UO dans les 2 jours
+      qui suivent la date d'envoi (= date de réception).
+   ========================================================= */
+
+/* --- 1) Délai d'envoi (UO -> DG), basé sur le type de rapport --- */
+function getEnvoiInfo(report){
+  const deadline = getDeadlineDate(report);
+  if (!deadline || !report.dateReception) return {deadline, joursRetard:0, statut:"na"};
+  const dateEnvoi = new Date(report.dateReception);
+  const jours = daysBetween(dateEnvoi, deadline);
+  return {deadline, joursRetard: jours, statut: jours > 0 ? "recu_retard" : "recu_temps", dateEnvoi};
+}
+function envoiBadge(info){
+  if (info.statut === "na") return `<span class="badge" style="background:#eef1f3;color:#657079;">—</span>`;
+  const d = fmtDate(info.deadline);
+  if (info.statut === "recu_temps") return `<span class="badge retard-ok" title="Échéance réglementaire ${d}">✓ Envoyé à temps</span>`;
+  return `<span class="badge retard-warn" title="Échéance réglementaire ${d}">⚠ Envoyé avec ${info.joursRetard} j de retard</span>`;
+}
+
+/* --- 2) Retard de traitement (DG), délai de 2 jours après réception --- */
+const DELAI_TRAITEMENT_JOURS = 2;
+function getTraitementDeadline(report){
+  if (!report.dateReception) return null;
+  const d = new Date(report.dateReception);
+  d.setDate(d.getDate() + DELAI_TRAITEMENT_JOURS);
+  return d;
+}
+/* Retourne {deadline, joursRetard, statut} avec statut parmi :
+   "traite_temps"  : traité et renvoyé à l'UO dans les 2 jours
+   "traite_retard" : traité et renvoyé à l'UO après les 2 jours
+   "retard"        : pas encore traité, délai de 2 jours dépassé (notification)
+   "a_venir"       : pas encore traité, délai pas encore atteint
+   "na"            : pas de date de réception renseignée */
+function getTraitementInfo(report){
+  const deadline = getTraitementDeadline(report);
+  if (!deadline) return {deadline:null, joursRetard:0, statut:"na"};
+  const consol = consolFor(report.id);
+  if (consol && consol.statut === "envoye" && consol.dateEnvoi){
+    const dateEnvoi = new Date(consol.dateEnvoi);
+    const jours = daysBetween(dateEnvoi, deadline);
+    return {deadline, joursRetard: jours, statut: jours > 0 ? "traite_retard" : "traite_temps", dateEnvoi};
+  }
+  const today = new Date();
+  const jours = daysBetween(today, deadline);
+  return {deadline, joursRetard: jours, statut: jours > 0 ? "retard" : "a_venir"};
+}
+function traitementBadge(info){
+  if (info.statut === "na") return `<span class="badge" style="background:#eef1f3;color:#657079;">—</span>`;
+  const d = fmtDate(info.deadline);
+  if (info.statut === "traite_temps") return `<span class="badge retard-ok" title="Délai de traitement (48h) : ${d}">✓ Traité à temps</span>`;
+  if (info.statut === "traite_retard") return `<span class="badge retard-late" title="Délai de traitement (48h) : ${d}">Traité avec ${info.joursRetard} j de retard</span>`;
+  if (info.statut === "retard") return `<span class="badge retard-late" title="Délai de traitement (48h) : ${d}">⚠ Retard de traitement : ${info.joursRetard} j</span>`;
+  return `<span class="badge retard-pending" title="Délai de traitement (48h) : ${d}">Reste ${-info.joursRetard} j pour traiter</span>`;
+}
+const RETARD_CAUSE_LABELS = {
+  equipe: "Retard côté équipe DG (ingénieurs / responsable)",
+  uo: "Retard côté Unité Opérationnelle (envoi tardif)"
+};
+/* Bloc affiché uniquement lorsqu'il y a (ou il y a eu) un retard de traitement.
+   Le responsable choisit une cause + un commentaire libre ; les autres
+   rôles voient la justification en lecture seule. */
+/* Petite étiquette "Justifié (Équipe/UO)" affichée à côté du badge de retard
+   de traitement dans le tableau, quand le responsable a rempli une cause. */
+function retardJustifTag(reportId, tInfo){
+  if (tInfo.statut !== "retard" && tInfo.statut !== "traite_retard") return "";
+  const consol = consolFor(reportId);
+  if (!consol || !consol.retardCause) return ` <span class="badge retard-pending" style="margin-left:4px;">Non justifié</span>`;
+  const short = consol.retardCause === "equipe" ? "Équipe DG" : "Unité Opérationnelle";
+  return ` <span class="badge" style="margin-left:4px;background:#eef1f3;color:#657079;" title="${escapeHtml(consol.retardCommentaire||"")}">Justifié · ${short}</span>`;
+}
+function renderRetardJustification(report, consol, tInfo, isResponsable){
+  if (tInfo.statut !== "retard" && tInfo.statut !== "traite_retard") return "";
+  const cause = consol && consol.retardCause ? consol.retardCause : "";
+  const commentaire = consol && consol.retardCommentaire ? consol.retardCommentaire : "";
+  const auteur = consol && consol.retardAuteur ? consol.retardAuteur : "";
+  const when = consol && consol.retardUpdatedAt ? fmtDate(consol.retardUpdatedAt) : "";
+
+  if (isResponsable){
+    return `
+      <div class="retard-justif-box">
+        <h4>⏱ Justification du retard de traitement</h4>
+        <select id="retardCause">
+          <option value="">— Sélectionner la cause du retard —</option>
+          <option value="equipe" ${cause==="equipe"?"selected":""}>${RETARD_CAUSE_LABELS.equipe}</option>
+          <option value="uo" ${cause==="uo"?"selected":""}>${RETARD_CAUSE_LABELS.uo}</option>
+        </select>
+        <textarea id="retardCommentaire" placeholder="Précisez brièvement la raison du retard...">${escapeHtml(commentaire)}</textarea>
+        <div style="margin-top:8px;text-align:right;">
+          <button class="btn btn-primary" id="btnSaveRetardJustif">Enregistrer la justification</button>
+        </div>
+        ${auteur ? `<div class="hint">Dernière justification par ${auteur}${when?" · "+when:""}</div>` : ""}
+      </div>
+    `;
+  }
+  if (!cause && !commentaire){
+    return `
+      <div class="retard-justif-box readonly">
+        <h4>⏱ Justification du retard de traitement</h4>
+        <div class="readonly-text empty">Pas encore justifié par le responsable.</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="retard-justif-box readonly">
+      <h4>⏱ Justification du retard de traitement</h4>
+      <div class="readonly-text">
+        <strong>${cause ? RETARD_CAUSE_LABELS[cause] : "Cause non précisée"}</strong>
+        ${commentaire ? "<br>"+escapeHtml(commentaire) : ""}
+      </div>
+      ${auteur ? `<div class="hint">Par ${auteur}${when?" · "+when:""}</div>` : ""}
+    </div>
+  `;
+}
+function fmtSize(bytes){
+  if (!bytes && bytes !== 0) return "";
+  if (bytes < 1024) return bytes + " o";
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + " Ko";
+  return (bytes/(1024*1024)).toFixed(1) + " Mo";
+}
+function uid(){
+  return (crypto.randomUUID ? crypto.randomUUID() : "id-"+Date.now()+"-"+Math.random().toString(16).slice(2));
+}
+function roleObj(){ return ROLES.find(r=>r.id===state.role); }
+
+/* Compile toutes les remarques de tous les systèmes d'un rapport
+   en un seul texte prêt à envoyer à l'UO comme remarque consolidée. */
+function buildSyntheseText(reportId){
+  const corps = DOMAINES.map(sys=>{
+    const rm = remarkFor(reportId, sys.id);
+    if (!rm || !rm.texte || !rm.texte.trim()) return "";
+    const errTxt = rm.nbErreurs ? ` — ${rm.nbErreurs} erreur${rm.nbErreurs>1?"s":""}` : "";
+    return `【${sys.label}】 — Priorité ${rm.priorite.toUpperCase()}${errTxt} — ${rm.auteur}\n${rm.texte.trim()}`;
+  }).filter(Boolean).join("\n\n");
+  const total = totalErreurs(reportId);
+  const totalLigne = total > 0 ? `Total des erreurs relevées : ${total}\n\n` : "";
+  return totalLigne + corps;
+}
+
+/* Compile les positions (validé/en cours + commentaire) des ingénieurs
+   suite à un round de retour de l'UO, en un seul texte de réponse finale. */
+function buildRetourSyntheseText(reportId, round){
+  return DOMAINES.map(sys=>{
+    const rm = remarkFor(reportId, sys.id);
+    if (!rm || !rm.texte || !rm.texte.trim()) return "";
+    const resp = retourReponseFor(reportId, sys.id, round);
+    if (!resp || !resp.statutRetour || resp.statutRetour === "en_attente") return "";
+    const statutLabel = resp.statutRetour === "valide" ? "VALIDÉ" : "EN COURS";
+    return `【${sys.label}】 — ${statutLabel} — ${resp.auteur || rm.auteur}\n${(resp.commentaire||"").trim() || "(sans commentaire)"}`;
+  }).filter(Boolean).join("\n\n");
+}
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+async function saveReport(data){
+  const id = data.id || uid();
+  const obj = {
+    id, uo:data.uo, type: data.type || "mensuel", periode:data.periode, dateReception:data.dateReception,
+    titre:data.titre || "", createdBy:state.role, createdAt: data.createdAt || new Date().toISOString()
+  };
+  await writeEntity(state.dirs.reports, id, obj);
+  await refreshAll();
+}
+async function saveRemark(reportId, domaine, texte, priorite, nbErreurs){
+  const existing = remarkFor(reportId, domaine);
+  const id = existing ? existing.id : uid();
+  const obj = {
+    id, reportId, domaine, texte, priorite: priorite || "moyenne",
+    nbErreurs: Math.max(0, parseInt(nbErreurs, 10) || 0),
+    auteur: displayName(roleObj()),
+    createdAt: existing ? existing.createdAt : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  // On vérifie AVANT l'écriture si l'analyse était déjà complète (tous les
+  // domaines déjà commentés), pour savoir si cette sauvegarde est celle qui
+  // vient de terminer l'analyse (le "dernier ingénieur").
+  const etaitDejaComplete = DOMAINES.every(d=>{
+    const rm = remarkFor(reportId, d.id);
+    return rm && rm.texte && rm.texte.trim();
+  });
+  await writeEntity(state.dirs.remarks, id, obj);
+  await refreshAll();
+  const estMaintenantComplete = DOMAINES.every(d=>{
+    const rm = remarkFor(reportId, d.id);
+    return rm && rm.texte && rm.texte.trim();
+  });
+  if (!etaitDejaComplete && estMaintenantComplete){
+    const report = state.reports.find(r=>r.id === reportId);
+    if (report) notifierResponsablesAnalyseTerminee(report);
+  }
+}
+
+/* Nombre total d'erreurs relevées par les ingénieurs sur un rapport,
+   toutes systèmes confondus (somme des nbErreurs de chaque remarque). */
+function totalErreurs(reportId){
+  return DOMAINES.reduce((sum, dom) => {
+    const rm = remarkFor(reportId, dom.id);
+    return sum + (rm && rm.nbErreurs ? rm.nbErreurs : 0);
+  }, 0);
+}
+async function saveConsolidation(reportId, texte, statut){
+  const existing = consolFor(reportId);
+  const obj = {
+    ...(existing || {}),
+    reportId,
+    texte,
+    statut,
+    responsable: displayName(roleObj()),
+    dateValidation: statut === "valide" ? new Date().toISOString() : (existing ? existing.dateValidation : null),
+    dateEnvoi: statut === "envoye" ? new Date().toISOString() : (existing ? existing.dateEnvoi : null),
+    updatedAt: new Date().toISOString()
+  };
+  await writeEntity(state.dirs.consolidations, reportId, obj);
+  await refreshAll();
+}
+/* Justification (par le responsable) du retard de traitement : la cause est
+   soit interne (équipe DG), soit externe (retard de l'unité opérationnelle
+   à envoyer son rapport). Stockée sur l'objet de consolidation pour rester
+   liée au rapport, sans écraser le reste (texte, statut, dates...). */
+async function saveRetardJustification(reportId, cause, commentaire){
+  const existing = consolFor(reportId);
+  const obj = {
+    ...(existing || {reportId, texte:"", statut:"brouillon", responsable: displayName(roleObj()), dateValidation:null, dateEnvoi:null}),
+    reportId,
+    retardCause: cause,
+    retardCommentaire: commentaire,
+    retardAuteur: displayName(roleObj()),
+    retardUpdatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  await writeEntity(state.dirs.consolidations, reportId, obj);
+  await refreshAll();
+}
+async function saveAttachment(reportId, category, file, round){
+  const id = uid();
+  const safeName = file.name.replace(/[\/\\:*?"<>|]/g, "_");
+  const storedName = id + "__" + safeName;
+  const fh = await state.dirs.fichiers.getFileHandle(storedName, {create:true});
+  const w = await fh.createWritable();
+  await w.write(await file.arrayBuffer());
+  await w.close();
+  const meta = {
+    id, reportId, category, filename:file.name, storedName,
+    mime:file.type, size:file.size, uploadedBy: displayName(roleObj()), uploadedAt: new Date().toISOString(),
+    round: round || null
+  };
+  await writeEntity(state.dirs.attachments, id, meta);
+  await refreshAll();
+}
+async function downloadAttachment(att){
+  try{
+    const fh = await state.dirs.fichiers.getFileHandle(att.storedName);
+    const file = await fh.getFile();
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url; a.download = att.filename; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }catch(e){ alert("Fichier introuvable dans le dossier partagé (peut-être déplacé ou supprimé)."); }
+}
+async function openAttachment(att){
+  try{
+    const fh = await state.dirs.fichiers.getFileHandle(att.storedName);
+    const file = await fh.getFile();
+    // On force le bon type MIME (celui enregistré à l'upload) pour que le
+    // navigateur sache qu'il doit AFFICHER le fichier plutôt que le télécharger.
+    const blob = new Blob([file], {type: att.mime || file.type || "application/octet-stream"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){ alert("Fichier introuvable dans le dossier partagé (peut-être déplacé ou supprimé)."); }
+}
+async function deleteAttachment(att){
+  if (!confirm(`Supprimer la pièce jointe « ${att.filename} » ?`)) return;
+  try{ await state.dirs.fichiers.removeEntry(att.storedName); }catch(e){}
+  try{ await state.dirs.attachments.removeEntry(att.id + ".json"); }catch(e){}
+  await refreshAll();
+}
+/* Enregistre ou met à jour le texte d'un round de retour UO (round 1, 2 ou 3). */
+async function saveRetourRound(reportId, round, texte){
+  const rounds = roundsFor(reportId);
+  const existing = rounds.find(r => r.round === round);
+  const id = existing ? existing.id : uid();
+  const obj = {
+    id, reportId, round, texte,
+    auteur: displayName(roleObj()),
+    dateRetour: existing ? existing.dateRetour : new Date().toISOString(),
+    syntheseReponse: existing ? existing.syntheseReponse : "",
+    syntheseReponseDate: existing ? existing.syntheseReponseDate : null,
+    syntheseStatut: existing ? (existing.syntheseStatut || "brouillon") : "brouillon",
+    syntheseValidePar: existing ? existing.syntheseValidePar : null,
+    syntheseDateValidation: existing ? existing.syntheseDateValidation : null,
+    syntheseDateEnvoi: existing ? existing.syntheseDateEnvoi : null,
+    updatedAt: new Date().toISOString()
+  };
+  await writeEntity(state.dirs.retours, id, obj);
+  await refreshAll();
+}
+/* Enregistre la synthèse de réponse d'un round de retour UO. Le statut suit
+   le même cycle que la consolidation principale : brouillon -> valide -> envoye.
+   Seul le responsable peut valider et marquer comme envoyé à l'UO. */
+async function saveRetourSynthese(reportId, round, texte, statut){
+  const existing = roundsFor(reportId).find(r => r.round === round);
+  if (!existing) return;
+  const nextStatut = statut || existing.syntheseStatut || "brouillon";
+  const obj = {
+    ...existing,
+    syntheseReponse: texte,
+    syntheseReponseDate: new Date().toISOString(),
+    syntheseStatut: nextStatut,
+    syntheseValidePar: nextStatut === "valide" ? displayName(roleObj()) : (nextStatut === "brouillon" ? null : existing.syntheseValidePar),
+    syntheseDateValidation: nextStatut === "valide" ? new Date().toISOString() : (nextStatut === "brouillon" ? null : existing.syntheseDateValidation),
+    syntheseDateEnvoi: nextStatut === "envoye" ? new Date().toISOString() : (nextStatut === "brouillon" ? null : existing.syntheseDateEnvoi)
+  };
+  await writeEntity(state.dirs.retours, existing.id, obj);
+  await refreshAll();
+}
+/* Vérifie si tous les ingénieurs concernés (ceux dont le domaine a une
+   remarque) ont donné une position (Validé ou En cours) sur un round donné
+   de retour UO — c'est-à-dire que l'analyse du retour est terminée. */
+function retourAnalyseComplete(reportId, round){
+  const concernes = DOMAINES.filter(d=>{
+    const rm = remarkFor(reportId, d.id);
+    return rm && rm.texte && rm.texte.trim();
+  });
+  if (concernes.length === 0) return false;
+  return concernes.every(d=>{
+    const resp = retourReponseFor(reportId, d.id, round);
+    return resp && resp.statutRetour && resp.statutRetour !== "en_attente";
+  });
+}
+async function saveRetourReponse(reportId, domaine, round, statutRetour, commentaire){
+  const existing = state.retourReponses.find(r => r.reportId===reportId && r.domaine===domaine && r.round===round);
+  const alreadyLocked = existing ? existing.statutRetour === "valide" : (retourReponseFor(reportId, domaine, round)||{}).statutRetour === "valide";
+  if (alreadyLocked){
+    alert("Cette position a déjà été validée et est verrouillée.");
+    return;
+  }
+  const id = existing ? existing.id : uid();
+  const obj = {
+    id, reportId, domaine, round, statutRetour, commentaire,
+    auteur: displayName(roleObj()),
+    updatedAt: new Date().toISOString()
+  };
+  const etaitDejaComplete = retourAnalyseComplete(reportId, round);
+  await writeEntity(state.dirs.retourReponses, id, obj);
+  await refreshAll();
+  const estMaintenantComplete = retourAnalyseComplete(reportId, round);
+  if (!etaitDejaComplete && estMaintenantComplete){
+    const report = state.reports.find(r=>r.id === reportId);
+    if (report) notifierResponsablesRetourAnalyseTerminee(report, round);
+  }
+}
+/* Suppression complète d'un rapport et de toutes ses données associées
+   (remarques, consolidation, retours + réponses, pièces jointes). */
+async function deleteReport(reportId){
+  const report = state.reports.find(r=>r.id===reportId);
+  if (!report) return;
+  if (!confirm(`Supprimer définitivement le rapport ${report.uo} — ${fmtPeriode(report.periode, report.type)} ?\n\nToutes les remarques, pièces jointes et retours UO associés seront également supprimés. Cette action est irréversible.`)) return;
+
+  try{ await state.dirs.reports.removeEntry(reportId + ".json"); }catch(e){}
+
+  for (const rm of remarksFor(reportId)){
+    try{ await state.dirs.remarks.removeEntry(rm.id + ".json"); }catch(e){}
+  }
+  try{ await state.dirs.consolidations.removeEntry(reportId + ".json"); }catch(e){}
+  for (const rnd of roundsFor(reportId)){
+    try{ await state.dirs.retours.removeEntry(rnd.id + ".json"); }catch(e){}
+  }
+  for (const resp of state.retourReponses.filter(r=>r.reportId===reportId)){
+    try{ await state.dirs.retourReponses.removeEntry(resp.id + ".json"); }catch(e){}
+  }
+  for (const att of attachmentsFor(reportId)){
+    try{ await state.dirs.fichiers.removeEntry(att.storedName); }catch(e){}
+    try{ await state.dirs.attachments.removeEntry(att.id + ".json"); }catch(e){}
+  }
+  await refreshAll();
+}
+
+/* =========================================================
+   RENDER: ROLE SELECT SCREEN
+   ========================================================= */
+function renderRoleScreen(){
+  const app = document.getElementById("app");
+  document.getElementById("roleChipZone").innerHTML = "";
+  app.innerHTML = `
+    <div class="role-screen">
+      <h2>Qui êtes-vous ?</h2>
+      <p>Sélectionnez votre rôle pour accéder au suivi. Ce choix est mémorisé sur cet ordinateur.</p>
+      <div class="role-grid">
+        ${ROLES.map(r => {
+          const nom = personName(r);
+          const hasPin = !!(state.roleConfig[r.id] && state.roleConfig[r.id].pin);
+          return `
+          <div class="role-card" data-role="${r.id}">
+            <div class="t">${r.label}${hasPin ? " 🔒" : ""}</div>
+            ${nom ? `<div class="d" style="font-weight:600;color:var(--accent, #2f6fed);">${nom}</div>` : ""}
+            <div class="d">${r.desc}</div>
+          </div>
+        `;}).join("")}
+      </div>
+      <div style="margin-top:18px;text-align:right;">
+        <button class="btn btn-outline" id="btnAdminIdentites">⚙ Gérer les noms &amp; droits d'accès</button>
+      </div>
+    </div>
+  `;
+  app.querySelectorAll(".role-card").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      const roleId = el.dataset.role;
+      const cfg = state.roleConfig[roleId];
+      if (cfg && cfg.pin){
+        const entered = prompt("Ce poste est protégé par un code d'accès.\nEntrez le code PIN :");
+        if (entered === null) return;
+        if (entered.trim() !== cfg.pin){
+          alert("Code PIN incorrect.");
+          return;
+        }
+      }
+      state.role = roleId;
+      localStorage.setItem("suivi-uo-role", state.role);
+      render();
+    });
+  });
+  document.getElementById("btnAdminIdentites").addEventListener("click", openIdentitesAdmin);
+}
+
+/* =========================================================
+   ADMINISTRATION DES IDENTITÉS (nom + PIN par poste + mot de passe admin)
+   ========================================================= */
+function openIdentitesAdmin(){
+  if (!state.connected){
+    alert("Connectez d'abord le dossier partagé pour pouvoir gérer les noms, PIN et mot de passe admin (ils doivent être visibles par tout le monde).");
+    return;
+  }
+  const entered = prompt("Accès réservé à l'administrateur.\nEntrez le mot de passe admin :");
+  if (entered === null) return;
+  if (entered !== state.adminPassword){
+    alert("Mot de passe incorrect.");
+    return;
+  }
+  const dlg = document.getElementById("identitesDialog");
+  dlg.innerHTML = `
+    <div class="dlg-head">
+      <div><h3>⚙ Noms &amp; droits d'accès par poste</h3>
+        <div class="meta">Le périmètre (systèmes accessibles) reste fixé par le poste. Associez ici le nom de la personne, son email (pour les notifications) et, si besoin, un code PIN pour protéger l'accès à son poste.</div>
+      </div>
+      <button class="close-x" id="admClose">✕</button>
+    </div>
+    <div class="dlg-body">
+      ${ROLES.map(r=>{
+        const c = state.roleConfig[r.id] || {};
+        return `
+        <div class="field" style="display:flex;gap:10px;align-items:flex-end;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+          <div style="flex:1.2;min-width:160px;">
+            <label>${r.label}</label>
+            <input type="text" data-role="${r.id}" data-field="nom" placeholder="Nom du titulaire" value="${c.nom || ""}">
+          </div>
+          <div style="flex:1.4;min-width:180px;">
+            <label>Email (pour les notifications)</label>
+            <input type="email" data-role="${r.id}" data-field="email" placeholder="prenom.nom@entreprise.dz" value="${c.email || ""}">
+          </div>
+          <div style="flex:0.8;min-width:120px;">
+            <label>Code PIN (optionnel)</label>
+            <input type="text" data-role="${r.id}" data-field="pin" placeholder="ex: 1234" value="${c.pin || ""}">
+          </div>
+        </div>`;
+      }).join("")}
+      <div class="field" style="margin-top:6px;padding-top:14px;border-top:2px solid var(--line);">
+        <label>🔑 Changer le mot de passe administrateur</label>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="admNewPass1" placeholder="Nouveau mot de passe admin">
+          <input type="text" id="admNewPass2" placeholder="Confirmer le nouveau mot de passe">
+        </div>
+        <div class="meta" style="margin-top:5px;">Laissez ces deux champs vides pour garder le mot de passe actuel.</div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-outline" id="admCancel">Annuler</button>
+      <button class="btn btn-primary" id="admSave">Enregistrer</button>
+    </div>
+  `;
+  const close = ()=> dlg.close();
+  dlg.querySelector("#admClose").addEventListener("click", close);
+  dlg.querySelector("#admCancel").addEventListener("click", close);
+  dlg.querySelector("#admSave").addEventListener("click", async ()=>{
+    const newCfg = {};
+    ROLES.forEach(r=>{
+      const nomInput = dlg.querySelector(`input[data-role="${r.id}"][data-field="nom"]`);
+      const emailInput = dlg.querySelector(`input[data-role="${r.id}"][data-field="email"]`);
+      const pinInput = dlg.querySelector(`input[data-role="${r.id}"][data-field="pin"]`);
+      const nom = nomInput.value.trim();
+      const email = emailInput.value.trim();
+      const pin = pinInput.value.trim();
+      if (nom || email || pin) newCfg[r.id] = {nom, email, pin};
+    });
+
+    const newPass1 = dlg.querySelector("#admNewPass1").value.trim();
+    const newPass2 = dlg.querySelector("#admNewPass2").value.trim();
+    if (newPass1 || newPass2){
+      if (newPass1 !== newPass2){
+        alert("Les deux champs du nouveau mot de passe admin ne correspondent pas. Rien n'a été enregistré.");
+        return;
+      }
+      if (newPass1.length < 4){
+        alert("Le mot de passe admin doit contenir au moins 4 caractères. Rien n'a été enregistré.");
+        return;
+      }
+      await saveAdminPassword(newPass1);
+    }
+
+    state.roleConfig = newCfg;
+    await saveRoleConfig();
+    dlg.close();
+    render();
+    if (newPass1) alert("Mot de passe admin mis à jour avec succès.");
+  });
+  dlg.showModal();
+}
+
+/* Chaque utilisateur peut changer son propre code PIN, sans passer par l'admin.
+   S'il avait déjà un PIN, il doit le fournir pour le changer. */
+async function changeMyPin(){
+  if (!state.connected){
+    alert("Connectez d'abord le dossier partagé pour pouvoir enregistrer votre code PIN (il doit être visible par tout le monde).");
+    return;
+  }
+  const role = roleObj();
+  const current = state.roleConfig[role.id] || {};
+  if (current.pin){
+    const entered = prompt("Entrez votre code PIN actuel pour le modifier :");
+    if (entered === null) return;
+    if (entered.trim() !== current.pin){
+      alert("Code PIN incorrect.");
+      return;
+    }
+  }
+  const nouveau = prompt("Nouveau code PIN (laissez vide pour supprimer la protection) :");
+  if (nouveau === null) return;
+  state.roleConfig[role.id] = {...current, pin: nouveau.trim()};
+  await saveRoleConfig();
+  alert(nouveau.trim() ? "Votre code PIN a été mis à jour." : "La protection par PIN a été retirée de votre poste.");
+  render();
+}
+
+/* =========================================================
+   NOTIFICATIONS NAVIGATEUR (en direct, tant que l'onglet est ouvert)
+   ========================================================= */
+async function enableBrowserNotifications(){
+  if (!("Notification" in window)){
+    alert("Votre navigateur ne supporte pas les notifications.");
+    return;
+  }
+  let perm = Notification.permission;
+  if (perm !== "granted"){
+    perm = await Notification.requestPermission();
+  }
+  if (perm !== "granted"){
+    alert("Notifications refusées. Vous pouvez les autoriser plus tard dans les réglages du site, dans votre navigateur.");
+    return;
+  }
+  // On mémorise les rapports déjà en attente au moment de l'activation,
+  // pour ne notifier que les NOUVEAUX rapports à partir de maintenant.
+  state.notifSeenIds = new Set(pendingReportsFor(roleObj()).map(r=>r.id));
+  state.notifEnabled = true;
+  if (state.notifTimer) clearInterval(state.notifTimer);
+  state.notifTimer = setInterval(pollForNewReports, 60000);
+  new Notification("Notifications activées", {body:"Vous serez alerté(e) ici dès qu'un nouveau rapport attend votre remarque, tant que cet onglet reste ouvert."});
+  renderRoleChip();
+}
+function disableBrowserNotifications(){
+  state.notifEnabled = false;
+  if (state.notifTimer){ clearInterval(state.notifTimer); state.notifTimer = null; }
+  renderRoleChip();
+}
+/* Sondage léger : relit juste les rapports/remarques du dossier partagé,
+   sans redessiner toute l'interface (pour ne pas perturber une saisie en cours). */
+async function pollForNewReports(){
+  if (!state.connected || !state.notifEnabled || !state.role) return;
+  const role = roleObj();
+  if (role.type !== "ingenieur") return;
+  try{
+    state.reports = await listEntities(state.dirs.reports);
+    state.remarks = await listEntities(state.dirs.remarks);
+  }catch(e){ return; }
+  const pending = pendingReportsFor(role);
+  const nouveaux = pending.filter(r => !state.notifSeenIds.has(r.id));
+  nouveaux.forEach(r=>{
+    new Notification("Nouveau rapport à traiter", {
+      body: `${r.uo} — ${fmtPeriode(r.periode, r.type)}${r.titre ? " — " + r.titre : ""}`
+    });
+    state.notifSeenIds.add(r.id);
+  });
+  renderRoleChip();
+}
+
+/* =========================================================
+   RENDER: ROLE CHIP (top bar)
+   ========================================================= */
+function pendingReportsFor(role){
+  if (role.type !== "ingenieur") return [];
+  return state.reports.filter(r=>
+    role.systemes.some(sysId=>{
+      const rm = remarkFor(r.id, sysId);
+      return !rm || !rm.texte || !rm.texte.trim();
+    })
+  );
+}
+function renderRoleChip(){
+  const zone = document.getElementById("roleChipZone");
+  if (!state.role){ zone.innerHTML=""; return; }
+  const role = roleObj();
+  let badge = "";
+  const pending = pendingReportsFor(role);
+  if (pending.length > 0){
+    badge = `<span title="Rapports où au moins une de vos remarques n'est pas encore saisie" style="background:var(--red);color:#fff;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;margin-left:6px;">🔔 ${pending.length}</span>`;
+  }
+  const notifSupported = ("Notification" in window) && role.type === "ingenieur";
+  let notifBtn = "";
+  if (notifSupported){
+    if (state.notifEnabled){
+      notifBtn = `<button id="btnToggleNotif" title="Cliquer pour désactiver">🔕 Notifs actives</button>`;
+    } else {
+      notifBtn = `<button id="btnToggleNotif">🔔 Activer les notifications</button>`;
+    }
+  }
+  zone.innerHTML = `
+    <div class="role-chip">
+      <span>👤 ${displayName(role)}${badge}</span>
+      ${notifBtn}
+      <button id="btnMyPin">🔑 Mon PIN</button>
+      <button id="btnSwitchRole">Changer</button>
+    </div>
+  `;
+  if (notifSupported){
+    document.getElementById("btnToggleNotif").addEventListener("click", ()=>{
+      if (state.notifEnabled) disableBrowserNotifications();
+      else enableBrowserNotifications();
+    });
+  }
+  document.getElementById("btnMyPin").addEventListener("click", changeMyPin);
+  document.getElementById("btnSwitchRole").addEventListener("click", ()=>{
+    if (state.notifEnabled) disableBrowserNotifications();
+    state.role = null;
+    localStorage.removeItem("suivi-uo-role");
+    render();
+  });
+}
+
+/* =========================================================
+   RENDER: CONNECTION BANNER
+   ========================================================= */
+function renderConnectionBanner(){
+  if (!fsSupported){
+    return `<div class="banner warn">⚠️ Ce navigateur ne supporte pas l'accès direct au dossier partagé. Utilisez <b>Chrome</b> ou <b>Edge</b> pour cette application.</div>`;
+  }
+  if (state.connected){
+    return `<div class="banner ok">✅ Connecté au dossier partagé — ${state.reports.length} rapport(s) suivis. <button class="btn btn-outline" id="btnRefresh">🔄 Actualiser</button></div>`;
+  }
+  if (state.rootHandle){
+    return `<div class="banner warn">🔒 Autorisation requise pour rouvrir le dossier partagé.
+      <button class="btn btn-primary" id="btnReauth">Autoriser l'accès</button></div>`;
+  }
+  return `<div class="banner warn">📁 Aucun dossier connecté. Connectez le dossier partagé du serveur DG (créez-y un dossier dédié, ex: <code>SuiviRapportsUO</code>) pour commencer.
+    <button class="btn btn-primary" id="btnConnect">Connecter le dossier partagé</button></div>`;
+}
+function bindConnectionBanner(){
+  const b1 = document.getElementById("btnConnect");
+  if (b1) b1.addEventListener("click", connectFolder);
+  const b2 = document.getElementById("btnReauth");
+  if (b2) b2.addEventListener("click", requestPermissionAgain);
+  const b3 = document.getElementById("btnRefresh");
+  if (b3) b3.addEventListener("click", refreshAll);
+}
+
+/* =========================================================
+   RENDER: STATS (director / overview)
+   ========================================================= */
+function renderStats(){
+  const rows = filteredReports();
+  const total = rows.length;
+  const enCours = rows.filter(r=>{
+    const s = reportStatut(r); return s==="encours" || s==="nouveau";
+  }).length;
+  const enAttenteValidation = rows.filter(r=>reportStatut(r)==="analyse").length;
+  const envoyes = rows.filter(r=>reportStatut(r)==="envoye").length;
+  const clotures = rows.filter(r=>reportStatut(r)==="cloture").length;
+  return `
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);">
+      <div class="stat-card"><div class="n">${total}</div><div class="l">Rapports suivis</div></div>
+      <div class="stat-card"><div class="n">${enCours}</div><div class="l">En attente d'analyse</div></div>
+      <div class="stat-card"><div class="n">${enAttenteValidation}</div><div class="l">Analysés — à valider</div></div>
+      <div class="stat-card"><div class="n">${envoyes}</div><div class="l">Envoyés à l'UO</div></div>
+      <div class="stat-card"><div class="n">${clotures}</div><div class="l">Clôturés</div></div>
+    </div>
+  `;
+}
+
+/* Moyenne d'erreurs par UO : pour chaque UO, moyenne (arrondie au chiffre
+   rond le plus proche, 5,5 → 6) du nombre total d'erreurs relevées sur ses
+   rapports déjà analysés (au moins une remarque saisie).
+   - Classement de 1 à 7 : UO classées de la plus grande moyenne d'erreurs (1)
+     à la plus petite (7).
+   - Petit graphique en barres : répartition des erreurs par mois (derniers
+     rapports analysés, chronologiquement, tous types de période confondus). */
+function periodeSortKey(r){
+  const {year, month} = periodeEndYearMonth(r.periode, r.type || "mensuel");
+  return year * 100 + month;
+}
+/* Libellé court du mois/période pour l'axe du mini graphique (sans année,
+   pour rester compact) : "Mai", "Juin", "T2", "S1", année pour l'annuel. */
+function periodeLabelCourt(r){
+  const typeId = r.type || "mensuel";
+  if (typeId === "trimestriel"){ const [,q] = r.periode.split("-T"); return "T"+q; }
+  if (typeId === "semestriel"){ const [,s] = r.periode.split("-S"); return "S"+s; }
+  if (typeId === "annuel"){ return r.periode; }
+  const [,m] = r.periode.split("-");
+  return MOIS_ABR[parseInt(m,10)-1];
+}
+/* Mini graphique en courbe (pas d'histogramme) montrant l'évolution des
+   erreurs des derniers rapports analysés d'une UO, avec le mois sous chaque
+   point. Reste volontairement petit pour tenir dans la carte. */
+function miniChartErreurs(rapports){
+  if (!rapports.length) return "";
+  const recents = rapports.slice(-6);
+  const valeurs = recents.map(r => totalErreurs(r.id));
+  const max = Math.max(1, ...valeurs);
+  const w = 140, chartH = 30, labelH = 9, padTop = 3;
+  const n = recents.length;
+  const stepX = n > 1 ? w / (n - 1) : 0;
+  const points = recents.map((r, i) => {
+    const x = n > 1 ? i * stepX : w / 2;
+    const y = padTop + (chartH - padTop) * (1 - valeurs[i] / max);
+    return {x, y, v: valeurs[i], r};
+  });
+  const polyline = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const circles = points.map((p, i) => {
+    const isLast = i === points.length - 1;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.3" fill="${isLast ? "var(--accent)" : "var(--ink-soft)"}"><title>${fmtPeriode(p.r.periode, p.r.type||"mensuel")} : ${p.v} erreur${p.v>1?"s":""}</title></circle>`;
+  }).join("");
+  const labels = points.map(p =>
+    `<text x="${p.x.toFixed(1)}" y="${chartH + labelH}" font-size="7.2" fill="var(--ink-soft)" text-anchor="middle">${periodeLabelCourt(p.r)}</text>`
+  ).join("");
+  return `<svg viewBox="0 0 ${w} ${chartH + labelH + 2}" width="${w}" height="${chartH + labelH + 2}" style="display:block;margin-top:8px;">
+    <polyline points="${polyline}" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
+    ${circles}
+    ${labels}
+  </svg>`;
+}
+function renderMoyenneErreursParUO(){
+  const lignes = UOS.map(uo=>{
+    const rapports = state.reports
+      .filter(r => r.uo === uo && remarksFor(r.id).some(rm => rm.texte && rm.texte.trim()))
+      .sort((a,b)=> periodeSortKey(a) - periodeSortKey(b));
+    if (!rapports.length) return {uo, moyenne:null, nb:0, rapports};
+    const somme = rapports.reduce((s,r)=> s + totalErreurs(r.id), 0);
+    const moyenne = Math.round(somme / rapports.length);
+    return {uo, moyenne, nb: rapports.length, rapports};
+  });
+
+  // Classement 1 → 7 sur la moyenne (plus haute moyenne = 1er). Toutes les UO
+  // reçoivent un rang, y compris celles sans rapport analysé (placées en
+  // dernier), pour que le badge de rang soit toujours affiché, avec le même
+  // design, sur les 7 cartes.
+  const classees = [...lignes].sort((a,b)=>{
+    if (a.moyenne === null && b.moyenne === null) return a.uo.localeCompare(b.uo);
+    if (a.moyenne === null) return 1;
+    if (b.moyenne === null) return -1;
+    return b.moyenne - a.moyenne;
+  });
+  const rangByUo = {};
+  classees.forEach((l, i) => { rangByUo[l.uo] = i + 1; });
+  const medaille = {1:"🥇", 2:"🥈", 3:"🥉", 4:"4️⃣", 5:"5️⃣", 6:"6️⃣", 7:"7️⃣"};
+  const rangBadge = (rang) => {
+    const coeur = medaille[rang] || `${rang}`;
+    return `<div style="position:absolute;top:8px;right:10px;background:var(--accent-dark);color:#fff;font-size:11.5px;font-weight:700;border-radius:12px;padding:2px 9px;">${coeur}</div>`;
+  };
+
+  return `
+    <div class="filterbar" style="margin-bottom:16px;">
+      <div style="width:100%;">
+        <label style="margin-bottom:8px;">Moyenne d'erreurs par UO</label>
+        <div class="stats-row" style="grid-template-columns:repeat(${UOS.length},1fr);">
+          ${classees.map(l=>`
+            <div class="stat-card" style="position:relative;">
+              ${rangBadge(rangByUo[l.uo])}
+              <div class="n">${l.moyenne===null ? "—" : l.moyenne}</div>
+              <div class="l">${l.uo}${l.nb ? " · "+l.nb+" rapport"+(l.nb>1?"s":"") : " · aucun rapport analysé"}</div>
+              ${miniChartErreurs(l.rapports)}
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   RENDER: NOTIFICATIONS
+   Deux listes distinctes, chacune triée du plus grave au moins grave :
+   1) Rapports reçus après l'échéance réglementaire d'envoi (UO -> DG)
+   2) Rapports dont le traitement DG dépasse le délai de 2 jours
+   ========================================================= */
+function envoiNotifications(){
+  return filteredReports()
+    .map(r => ({report:r, info:getEnvoiInfo(r)}))
+    .filter(x => x.info.statut === "recu_retard")
+    .sort((a,b)=> b.info.joursRetard - a.info.joursRetard);
+}
+function traitementNotifications(){
+  return filteredReports()
+    .map(r => ({report:r, info:getTraitementInfo(r)}))
+    .filter(x => x.info.statut === "retard")
+    .sort((a,b)=> b.info.joursRetard - a.info.joursRetard);
+}
+function renderNotifItem(r, info, badgeHtml){
+  return `
+    <li data-id="${r.id}">
+      <span class="lbl">
+        <span class="uo-tag">${r.uo}</span>
+        <span class="type-tag">${reportTypeObj(r.type||"mensuel").label}</span>
+        ${fmtPeriode(r.periode, r.type)}${r.titre ? " · "+escapeHtml(r.titre) : ""}
+      </span>
+      ${badgeHtml}
+    </li>`;
+}
+function renderEnvoiBanner(){
+  const items = envoiNotifications();
+  if (items.length === 0) return "";
+  return `
+    <div class="retard-banner envoi">
+      <h4>⚠ ${items.length} rapport(s) reçu(s) après l'échéance réglementaire d'envoi</h4>
+      <ul>
+        ${items.map(({report:r, info})=> renderNotifItem(r, info,
+          `<span class="badge retard-warn">Reçu avec ${info.joursRetard} j de retard (échéance ${fmtDate(info.deadline)})</span>`
+        )).join("")}
+      </ul>
+    </div>
+  `;
+}
+function renderTraitementBanner(){
+  const items = traitementNotifications();
+  if (items.length === 0) return "";
+  return `
+    <div class="retard-banner traitement">
+      <h4>⏱ ${items.length} rapport(s) en retard de traitement (délai de ${DELAI_TRAITEMENT_JOURS} j après réception)</h4>
+      <ul>
+        ${items.map(({report:r, info})=> renderNotifItem(r, info,
+          `<span class="badge retard-late">En retard de ${info.joursRetard} j (délai ${fmtDate(info.deadline)})</span>${retardJustifTag(r.id, info)}`
+        )).join("")}
+      </ul>
+    </div>
+  `;
+}
+function bindNotifBanners(){
+  document.querySelectorAll(".retard-banner li[data-id]").forEach(li=>{
+    li.addEventListener("click", ()=> openReportDialog(li.dataset.id));
+  });
+}
+
+/* =========================================================
+   RENDER: FILTER BAR
+   ========================================================= */
+function renderFilterBar(){
+  return `
+    <div class="filterbar">
+      <div>
+        <label>UO</label>
+        <select id="fUo">
+          <option value="">Toutes</option>
+          ${UOS.map(u=>`<option value="${u}" ${state.filter.uo===u?"selected":""}>${u}</option>`).join("")}
+        </select>
+      </div>
+      <div>
+        <label>Type</label>
+        <select id="fType">
+          <option value="">Tous</option>
+          ${REPORT_TYPES.map(t=>`<option value="${t.id}" ${state.filter.type===t.id?"selected":""}>${t.label}</option>`).join("")}
+        </select>
+      </div>
+      <div>
+        <label>Période (mensuel)</label>
+        <input type="month" id="fPeriode" value="${state.filter.periode}">
+      </div>
+      <div>
+        <label>Statut</label>
+        <select id="fStatut">
+          <option value="">Tous</option>
+          ${Object.entries(STATUT_LABELS).map(([k,v])=>`<option value="${k}" ${state.filter.statut===k?"selected":""}>${v.label}</option>`).join("")}
+        </select>
+      </div>
+      <div>
+        <label>Trier par</label>
+        <select id="fSort">
+          <option value="periode-desc" ${state.sortBy==="periode"&&state.sortDir==="desc"?"selected":""}>Période (récent → ancien)</option>
+          <option value="periode-asc" ${state.sortBy==="periode"&&state.sortDir==="asc"?"selected":""}>Période (ancien → récent)</option>
+          <option value="envoi-desc" ${state.sortBy==="envoi"&&state.sortDir==="desc"?"selected":""}>Délai d'envoi (pire → meilleur)</option>
+          <option value="envoi-asc" ${state.sortBy==="envoi"&&state.sortDir==="asc"?"selected":""}>Délai d'envoi (meilleur → pire)</option>
+          <option value="traitement-desc" ${state.sortBy==="traitement"&&state.sortDir==="desc"?"selected":""}>Retard de traitement (pire → meilleur)</option>
+          <option value="traitement-asc" ${state.sortBy==="traitement"&&state.sortDir==="asc"?"selected":""}>Retard de traitement (meilleur → pire)</option>
+          <option value="erreurs-desc" ${state.sortBy==="erreurs"&&state.sortDir==="desc"?"selected":""}>Erreurs (plus → moins)</option>
+          <option value="erreurs-asc" ${state.sortBy==="erreurs"&&state.sortDir==="asc"?"selected":""}>Erreurs (moins → plus)</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label>Recherche</label>
+        <input type="text" id="fQ" placeholder="Titre, référence..." value="${state.filter.q}" style="width:100%;">
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" id="btnNewReport">+ Ajouter un rapport</button>
+    </div>
+  `;
+}
+function bindFilterBar(){
+  document.getElementById("fUo").addEventListener("change", e=>{ state.filter.uo=e.target.value; render(); });
+  document.getElementById("fType").addEventListener("change", e=>{ state.filter.type=e.target.value; render(); });
+  document.getElementById("fPeriode").addEventListener("change", e=>{ state.filter.periode=e.target.value; render(); });
+  document.getElementById("fStatut").addEventListener("change", e=>{ state.filter.statut=e.target.value; render(); });
+  document.getElementById("fSort").addEventListener("change", e=>{
+    const [by, dir] = e.target.value.split("-");
+    state.sortBy = by; state.sortDir = dir; render();
+  });
+  document.getElementById("fQ").addEventListener("input", e=>{ state.filter.q=e.target.value; render(); });
+  document.getElementById("btnNewReport").addEventListener("click", openNewReportDialog);
+}
+
+/* =========================================================
+   RENDER: REPORTS TABLE
+   ========================================================= */
+function filteredReports(){
+  const rows = state.reports.filter(r=>{
+    if (state.filter.uo && r.uo !== state.filter.uo) return false;
+    if (state.filter.type && (r.type||"mensuel") !== state.filter.type) return false;
+    if (state.filter.periode && r.periode !== state.filter.periode) return false;
+    if (state.filter.statut && reportStatut(r) !== state.filter.statut) return false;
+    if (state.filter.q && !(r.titre||"").toLowerCase().includes(state.filter.q.toLowerCase())) return false;
+    return true;
+  });
+  const dir = state.sortDir === "asc" ? 1 : -1;
+  if (state.sortBy === "envoi"){
+    rows.sort((a,b)=> dir * (getEnvoiInfo(a).joursRetard - getEnvoiInfo(b).joursRetard) || (a.uo||"").localeCompare(b.uo||""));
+  } else if (state.sortBy === "traitement"){
+    rows.sort((a,b)=> dir * (getTraitementInfo(a).joursRetard - getTraitementInfo(b).joursRetard) || (a.uo||"").localeCompare(b.uo||""));
+  } else if (state.sortBy === "erreurs"){
+    rows.sort((a,b)=> dir * (totalErreurs(a.id) - totalErreurs(b.id)) || (a.uo||"").localeCompare(b.uo||""));
+  } else {
+    rows.sort((a,b)=> dir * (a.periode||"").localeCompare(b.periode||"") || (a.uo||"").localeCompare(b.uo||""));
+  }
+  return rows;
+}
+function domainDot(reportId, domId){
+  const rm = remarkFor(reportId, domId);
+  const done = rm && rm.texte && rm.texte.trim();
+  const mine = roleObj().type==="ingenieur" && roleObj().systemes && roleObj().systemes.includes(domId);
+  return `<span class="dot ${done?"done":"pending"} ${mine?"mine":""}" title="${DOMAINES.find(d=>d.id===domId).label}: ${done?"traité":"en attente"}">${done?"✓":"·"}</span>`;
+}
+function systemsProgress(reportId){
+  const nbDone = DOMAINES.filter(s=>{
+    const rm = remarkFor(reportId, s.id);
+    return rm && rm.texte && rm.texte.trim();
+  }).length;
+  const dots = DOMAINES.map(s=>domainDot(reportId, s.id)).join("");
+  return `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">${dots}<span style="font-size:11px;color:var(--ink-soft);margin-left:4px;">${nbDone}/${DOMAINES.length}</span></div>`;
+}
+function renderTable(){
+  const rows = filteredReports();
+  if (rows.length === 0){
+    return `<div class="empty-state">Aucun rapport ne correspond aux filtres.<br>Utilisez « + Ajouter un rapport » pour commencer le suivi.</div>`;
+  }
+  const canDelete = roleObj().type === "responsable";
+  const periodeArrow = state.sortBy==="periode" ? `<span class="arrow">${state.sortDir==="desc"?"▼":"▲"}</span>` : "";
+  const envoiArrow = state.sortBy==="envoi" ? `<span class="arrow">${state.sortDir==="desc"?"▼":"▲"}</span>` : "";
+  const traitementArrow = state.sortBy==="traitement" ? `<span class="arrow">${state.sortDir==="desc"?"▼":"▲"}</span>` : "";
+  const erreursArrow = state.sortBy==="erreurs" ? `<span class="arrow">${state.sortDir==="desc"?"▼":"▲"}</span>` : "";
+  return `
+    <table class="reports">
+      <thead>
+        <tr>
+          <th>UO</th><th>Type</th>
+          <th class="sortable-th" id="thPeriode">Période${periodeArrow}</th>
+          <th>Titre / Réf.</th><th>Reçu le</th>
+          <th>Systèmes (CFA · CFO · ELM · LAC · BO · VOIE · Billet.)</th><th class="sortable-th" id="thErreurs">Erreurs${erreursArrow}</th><th>Statut</th>
+          <th class="sortable-th" id="thEnvoi">Délai d'envoi${envoiArrow}</th>
+          <th class="sortable-th" id="thTraitement">Retard de traitement${traitementArrow}</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r=>{
+          const st = STATUT_LABELS[reportStatut(r)];
+          const eInfo = getEnvoiInfo(r);
+          const tInfo = getTraitementInfo(r);
+          return `
+          <tr class="rowhover" data-id="${r.id}">
+            <td><span class="uo-tag">${r.uo}</span></td>
+            <td><span class="type-tag">${reportTypeObj(r.type||"mensuel").label}</span></td>
+            <td>${fmtPeriode(r.periode, r.type)}</td>
+            <td>${r.titre || "<span style='color:#a3adb3'>—</span>"}</td>
+            <td>${fmtDate(r.dateReception)}</td>
+            <td>${systemsProgress(r.id)}</td>
+            <td>${totalErreurs(r.id) > 0 ? `<span class="badge" style="background:var(--red-soft);color:var(--red);">${totalErreurs(r.id)}</span>` : "<span style='color:#a3adb3'>—</span>"}</td>
+            <td><span class="badge ${st.cls}">${st.label}</span></td>
+            <td>${envoiBadge(eInfo)}</td>
+            <td>${traitementBadge(tInfo)}${retardJustifTag(r.id, tInfo)}</td>
+            <td>${canDelete ? `<button class="btn btn-outline" style="padding:4px 8px;color:var(--red);" data-delreport="${r.id}" title="Supprimer ce rapport">🗑</button>` : ""}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+}
+function bindTable(){
+  document.querySelectorAll("tr[data-id]").forEach(tr=>{
+    tr.addEventListener("click", (e)=>{
+      if (e.target.closest("[data-delreport]")) return;
+      openReportDialog(tr.dataset.id);
+    });
+  });
+  document.querySelectorAll("[data-delreport]").forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      e.stopPropagation();
+      await deleteReport(btn.dataset.delreport);
+    });
+  });
+  const thPeriode = document.getElementById("thPeriode");
+  if (thPeriode) thPeriode.addEventListener("click", ()=>{
+    if (state.sortBy === "periode") state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortBy = "periode"; state.sortDir = "desc"; }
+    render();
+  });
+  const thEnvoi = document.getElementById("thEnvoi");
+  if (thEnvoi) thEnvoi.addEventListener("click", ()=>{
+    if (state.sortBy === "envoi") state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortBy = "envoi"; state.sortDir = "desc"; }
+    render();
+  });
+  const thTraitement = document.getElementById("thTraitement");
+  if (thTraitement) thTraitement.addEventListener("click", ()=>{
+    if (state.sortBy === "traitement") state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortBy = "traitement"; state.sortDir = "desc"; }
+    render();
+  });
+  const thErreurs = document.getElementById("thErreurs");
+  if (thErreurs) thErreurs.addEventListener("click", ()=>{
+    if (state.sortBy === "erreurs") state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    else { state.sortBy = "erreurs"; state.sortDir = "desc"; }
+    render();
+  });
+}
+
+/* =========================================================
+   DIALOG: NEW REPORT
+   ========================================================= */
+function openNewReportDialog(){
+  const dlg = document.getElementById("newReportDialog");
+  dlg.innerHTML = `
+    <div class="dlg-head">
+      <div><h3>Ajouter un rapport reçu</h3><div class="meta">Enregistré par ${displayName(roleObj())}</div></div>
+      <button class="close-x" id="closeNew">✕</button>
+    </div>
+    <div class="dlg-body">
+      <div class="grid2">
+        <div class="field">
+          <label>Unité Opérationnelle</label>
+          <select id="nUo">${UOS.map(u=>`<option value="${u}">${u}</option>`).join("")}</select>
+        </div>
+        <div class="field">
+          <label>Type de rapport</label>
+          <select id="nType">${REPORT_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join("")}</select>
+        </div>
+      </div>
+      <div class="field" id="nPeriodeField"></div>
+      <div class="field" id="nDeadlineHint" style="font-size:12px;color:var(--ink-soft);"></div>
+      <div class="field">
+        <label>Date de réception</label>
+        <input type="date" id="nDate" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      <div class="field">
+        <label>Titre / référence (optionnel)</label>
+        <input type="text" id="nTitre" placeholder="ex: Rapport activité maintenance juin 2026">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>📄 Rapport Word (optionnel)</label>
+          <input type="file" id="nWord" accept=".doc,.docx">
+        </div>
+        <div class="field">
+          <label>📊 Rapport Excel (optionnel)</label>
+          <input type="file" id="nExcel" accept=".xls,.xlsx,.csv">
+        </div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-outline" id="cancelNew">Annuler</button>
+      <button class="btn btn-primary" id="saveNew">Enregistrer</button>
+    </div>
+  `;
+
+  /* Reconstruit le champ "Période" selon le type de rapport sélectionné,
+     et affiche un rappel de l'échéance réglementaire d'envoi. */
+  function renderPeriodeField(){
+    const typeId = dlg.querySelector("#nType").value;
+    const now = new Date();
+    const y = now.getFullYear();
+    const field = dlg.querySelector("#nPeriodeField");
+    if (typeId === "trimestriel"){
+      const qActuel = Math.floor(now.getMonth()/3) + 1;
+      field.innerHTML = `
+        <label>Trimestre concerné</label>
+        <div class="grid2">
+          <select id="nQ">
+            ${[1,2,3,4].map(q=>`<option value="${q}" ${q===qActuel?"selected":""}>Trimestre ${q}</option>`).join("")}
+          </select>
+          <input type="number" id="nYear" value="${y}" min="2000" max="2100">
+        </div>`;
+    } else if (typeId === "semestriel"){
+      const sActuel = now.getMonth() < 6 ? 1 : 2;
+      field.innerHTML = `
+        <label>Semestre concerné</label>
+        <div class="grid2">
+          <select id="nS">
+            <option value="1" ${sActuel===1?"selected":""}>Semestre 1 (Jan-Juin)</option>
+            <option value="2" ${sActuel===2?"selected":""}>Semestre 2 (Juil-Déc)</option>
+          </select>
+          <input type="number" id="nYear" value="${y}" min="2000" max="2100">
+        </div>`;
+    } else if (typeId === "annuel"){
+      field.innerHTML = `
+        <label>Année concernée</label>
+        <input type="number" id="nYear" value="${y}" min="2000" max="2100">`;
+    } else {
+      field.innerHTML = `
+        <label>Mois concerné</label>
+        <input type="month" id="nPeriode" value="${now.toISOString().slice(0,7)}">`;
+    }
+    updateDeadlineHint();
+  }
+  /* Construit la chaîne "periode" stockée à partir des champs actuellement affichés. */
+  function readPeriodeValue(){
+    const typeId = dlg.querySelector("#nType").value;
+    if (typeId === "trimestriel"){
+      const q = dlg.querySelector("#nQ").value, y = dlg.querySelector("#nYear").value;
+      return y ? `${y}-T${q}` : "";
+    }
+    if (typeId === "semestriel"){
+      const s = dlg.querySelector("#nS").value, y = dlg.querySelector("#nYear").value;
+      return y ? `${y}-S${s}` : "";
+    }
+    if (typeId === "annuel"){
+      const y = dlg.querySelector("#nYear").value;
+      return y ? `${y}` : "";
+    }
+    return dlg.querySelector("#nPeriode").value;
+  }
+  function updateDeadlineHint(){
+    const typeId = dlg.querySelector("#nType").value;
+    const periode = readPeriodeValue();
+    const hint = dlg.querySelector("#nDeadlineHint");
+    if (!periode){ hint.textContent = ""; return; }
+    const deadline = getDeadlineDate({type:typeId, periode});
+    hint.textContent = deadline ? `⏱ Échéance réglementaire d'envoi à la DG : ${fmtDate(deadline)}` : "";
+  }
+  renderPeriodeField();
+  dlg.querySelector("#nType").addEventListener("change", renderPeriodeField);
+  dlg.querySelector("#nPeriodeField").addEventListener("change", updateDeadlineHint);
+
+  dlg.querySelector("#closeNew").addEventListener("click", ()=>dlg.close());
+  dlg.querySelector("#cancelNew").addEventListener("click", ()=>dlg.close());
+  dlg.querySelector("#saveNew").addEventListener("click", async ()=>{
+    const uo = dlg.querySelector("#nUo").value;
+    const type = dlg.querySelector("#nType").value;
+    const periode = readPeriodeValue();
+    const dateReception = dlg.querySelector("#nDate").value;
+    const titre = dlg.querySelector("#nTitre").value;
+    const wordFile = dlg.querySelector("#nWord").files[0];
+    const excelFile = dlg.querySelector("#nExcel").files[0];
+    if (!periode || !dateReception){ alert("Merci de renseigner la période et la date de réception."); return; }
+    const btn = dlg.querySelector("#saveNew");
+    btn.disabled = true; btn.textContent = "Enregistrement...";
+    const newId = uid();
+    await saveReport({id:newId, uo, type, periode, dateReception, titre});
+    if (wordFile) await saveAttachment(newId, "word", wordFile);
+    if (excelFile) await saveAttachment(newId, "excel", excelFile);
+    dlg.close();
+    notifierIngenieursNouveauRapport({id:newId, uo, type, periode, dateReception, titre});
+  });
+  dlg.showModal();
+}
+
+/* Propose au responsable, juste après avoir saisi un retour de l'UO, d'envoyer
+   un email aux ingénieurs pour leur demander de ré-analyser ce retour. */
+function notifierIngenieursRetourUO(report, round){
+  const destinataires = ROLES
+    .filter(r=>r.type==="ingenieur")
+    .map(r=> (state.roleConfig[r.id] && state.roleConfig[r.id].email) || "")
+    .filter(Boolean);
+  if (destinataires.length === 0){
+    return; // aucun email configuré, on ne propose rien
+  }
+  if (!confirm(`Prévenir les ${destinataires.length} ingénieur(s) par email qu'un retour de l'UO ${report.uo} (${fmtPeriode(report.periode, report.type)}) vient d'être reçu et doit être ré-analysé ?`)) return;
+  const lien = buildReportLink(report.id);
+  const sujet = `Retour UO reçu — à ré-analyser — ${report.uo} — ${fmtPeriode(report.periode, report.type)}`;
+  const corps = `Bonjour,\n\nL'UO ${report.uo} a transmis son retour${roundsFor(report.id).length>1 ? " (Round "+round+")" : ""} sur le rapport de la période ${fmtPeriode(report.periode, report.type)}${report.titre ? " (" + report.titre + ")" : ""}.\n\nMerci de vous connecter à l'outil de suivi pour ré-analyser ce retour et donner votre position (Validé / En cours) sur votre système.\n\nAccès direct au rapport (copiez-collez le lien dans votre navigateur si le clic ne fonctionne pas) :\n${lien}\n\nCordialement.`;
+  const mailto = `mailto:${destinataires.join(";")}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  window.location.href = mailto;
+}
+
+/* Propose au dernier ingénieur qui vient de donner sa position sur le retour
+   UO d'envoyer un email aux responsables pour les prévenir que l'équipe a
+   terminé l'analyse de ce retour. */
+function notifierResponsablesRetourAnalyseTerminee(report, round){
+  const destinataires = ROLES
+    .filter(r=>r.type==="responsable")
+    .map(r=> (state.roleConfig[r.id] && state.roleConfig[r.id].email) || "")
+    .filter(Boolean);
+  if (destinataires.length === 0){
+    return; // aucun email configuré, on ne propose rien
+  }
+  if (!confirm(`Toute l'équipe d'ingénieurs a terminé l'analyse du retour UO ${roundsFor(report.id).length>1 ? "(Round "+round+") " : ""}pour le rapport ${report.uo} — ${fmtPeriode(report.periode, report.type)}.\n\nPrévenir le(s) responsable(s) par email ?`)) return;
+  const lien = buildReportLink(report.id);
+  const sujet = `Analyse du retour UO terminée — ${report.uo} — ${fmtPeriode(report.periode, report.type)}`;
+  const corps = `Bonjour,\n\nL'équipe d'ingénieurs a terminé l'analyse du retour de l'UO ${report.uo}${roundsFor(report.id).length>1 ? " (Round "+round+")" : ""} pour la période ${fmtPeriode(report.periode, report.type)}${report.titre ? " (" + report.titre + ")" : ""}.\n\nToutes les positions (Validé / En cours) ont été renseignées. Vous pouvez générer la synthèse de réponse à envoyer à l'UO.\n\nAccès direct au rapport (copiez-collez le lien dans votre navigateur si le clic ne fonctionne pas) :\n${lien}\n\nCordialement.`;
+  const mailto = `mailto:${destinataires.join(";")}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  window.location.href = mailto;
+}
+
+/* Propose au dernier ingénieur qui vient de saisir sa remarque d'envoyer un
+   email aux responsables pour les prévenir que l'équipe a terminé l'analyse
+   du rapport et qu'il/elle peut procéder à la consolidation/validation. */
+function notifierResponsablesAnalyseTerminee(report){
+  const destinataires = ROLES
+    .filter(r=>r.type==="responsable")
+    .map(r=> (state.roleConfig[r.id] && state.roleConfig[r.id].email) || "")
+    .filter(Boolean);
+  if (destinataires.length === 0){
+    return; // aucun email configuré, on ne propose rien
+  }
+  if (!confirm(`Toute l'équipe d'ingénieurs a terminé son analyse pour le rapport ${report.uo} — ${fmtPeriode(report.periode, report.type)}.\n\nPrévenir le(s) responsable(s) par email afin qu'ils procèdent à la consolidation et à la validation ?`)) return;
+  const lien = buildReportLink(report.id);
+  const sujet = `Analyse terminée — ${report.uo} — ${fmtPeriode(report.periode, report.type)}`;
+  const corps = `Bonjour,\n\nL'équipe d'ingénieurs a terminé son analyse du rapport de l'UO ${report.uo} pour la période ${fmtPeriode(report.periode, report.type)}${report.titre ? " (" + report.titre + ")" : ""}.\n\nToutes les remarques (CFA, CFO, ELM, LAC, BO, VOIE, Billettique) ont été saisies. Le rapport est prêt pour la consolidation et la validation.\n\nAccès direct au rapport (copiez-collez le lien dans votre navigateur si le clic ne fonctionne pas) :\n${lien}\n\nCordialement.`;
+  const mailto = `mailto:${destinataires.join(";")}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  window.location.href = mailto;
+}
+
+/* Propose au responsable d'envoyer un email (via sa messagerie) aux
+   ingénieurs pour les prévenir qu'un nouveau rapport attend leurs remarques. */
+function notifierIngenieursNouveauRapport(report){
+  const destinataires = ROLES
+    .filter(r=>r.type==="ingenieur")
+    .map(r=> (state.roleConfig[r.id] && state.roleConfig[r.id].email) || "")
+    .filter(Boolean);
+  if (destinataires.length === 0){
+    return; // aucun email configuré, on ne propose rien
+  }
+  if (!confirm(`Prévenir les ${destinataires.length} ingénieur(s) par email qu'un nouveau rapport (${report.uo} — ${fmtPeriode(report.periode, report.type)}) attend leurs remarques ?`)) return;
+  const lien = buildReportLink(report.id);
+  const sujet = `Nouveau rapport reçu — ${report.uo} — ${fmtPeriode(report.periode, report.type)}`;
+  const corps = `Bonjour,\n\nUn nouveau rapport a été reçu de l'UO ${report.uo} pour la période ${fmtPeriode(report.periode, report.type)}${report.titre ? " (" + report.titre + ")" : ""}.\n\nMerci de vous connecter à l'outil de suivi pour y ajouter votre remarque dès que possible.\n\nAccès direct au rapport (copiez-collez le lien dans votre navigateur si le clic ne fonctionne pas) :\n${lien}\n\nCordialement.`;
+  const mailto = `mailto:${destinataires.join(";")}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  window.location.href = mailto;
+}
+
+/* Construit un lien vers le fichier HTML (même dossier réseau partagé pour
+   tout le monde) avec un paramètre ?report=ID pour ouvrir directement la fiche. */
+function buildReportLink(reportId){
+  const base = window.location.href.split("?")[0].split("#")[0];
+  return `${base}?report=${encodeURIComponent(reportId)}`;
+}
+
+/* =========================================================
+   DIALOG: REPORT DETAIL (remarks + consolidation)
+   ========================================================= */
+function attCategoryLabel(cat){
+  return {word:"Rapport Word", excel:"Rapport Excel", retour:"Retour UO", retour_word:"Word modifié (retour UO)", retour_excel:"Excel modifié (retour UO)", retour_autre:"Retour UO", autre:"Autre"}[cat] || "Fichier";
+}
+function attCategoryIcon(cat){
+  return {word:"📄", excel:"📊", retour:"📥", retour_word:"📄", retour_excel:"📊", retour_autre:"📥", autre:"📎"}[cat] || "📎";
+}
+function renderAttachmentsSection(reportId, canUpload){
+  const atts = attachmentsFor(reportId).filter(a=>a.category==="word" || a.category==="excel" || a.category==="autre");
+  const list = atts.length
+    ? atts.map(a=>`
+        <div class="att-item">
+          <div class="left">
+            <span>${attCategoryIcon(a.category)}</span>
+            <span class="fn" title="${escapeHtml(a.filename)}">${escapeHtml(a.filename)}</span>
+            <span class="att-tag ${a.category}">${attCategoryLabel(a.category)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="meta2">${fmtSize(a.size)} · ${a.uploadedBy} · ${fmtDate(a.uploadedAt)}</span>
+            <button class="btn btn-outline" style="padding:4px 8px;" data-openatt="${a.id}">👁</button>
+            <button class="btn btn-outline" style="padding:4px 8px;" data-dlatt="${a.id}">⬇</button>
+            ${canUpload ? `<button class="btn btn-outline" style="padding:4px 8px;color:var(--red);" data-delatt="${a.id}">🗑</button>` : ""}
+          </div>
+        </div>
+      `).join("")
+    : `<div class="hint" style="margin:0 0 8px;">Aucune pièce jointe pour ce rapport.</div>`;
+  const uploadForm = canUpload ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+        <select id="attCategory" style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12.5px;">
+          <option value="word">📄 Rapport Word</option>
+          <option value="excel">📊 Rapport Excel</option>
+          <option value="autre">📎 Autre document</option>
+        </select>
+        <input type="file" id="attFile" style="font-size:12.5px;">
+        <button class="btn btn-outline" id="btnAddAtt">+ Joindre</button>
+      </div>
+    ` : "";
+  return `
+    <div class="domain-block">
+      <div class="dh"><span class="name">📎 Pièces jointes</span></div>
+      ${list}
+      ${uploadForm}
+    </div>
+  `;
+}
+
+function retourAttListMarkup(reportId, round, isResponsable){
+  const atts = state.attachments.filter(a => a.reportId===reportId && a.category && a.category.indexOf("retour")===0 && (a.round||1)===round);
+  return atts.map(a=>`
+    <div class="att-item">
+      <div class="left"><span>${attCategoryIcon(a.category)}</span><span class="fn" title="${escapeHtml(a.filename)}">${escapeHtml(a.filename)}</span><span class="att-tag retour">${attCategoryLabel(a.category)}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="meta2">${fmtSize(a.size)} · ${a.uploadedBy} · ${fmtDate(a.uploadedAt)}</span>
+        <button class="btn btn-outline" style="padding:4px 8px;" data-openatt="${a.id}">👁</button>
+        <button class="btn btn-outline" style="padding:4px 8px;" data-dlatt="${a.id}">⬇</button>
+        ${isResponsable ? `<button class="btn btn-outline" style="padding:4px 8px;color:var(--red);" data-delatt="${a.id}">🗑</button>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+function retourRoundFormFields(idSuffix, existingTexte){
+  return `
+    <textarea id="retourText-${idSuffix}" placeholder="Collez ici le retour de l'UO sur les remarques envoyées...">${escapeHtml(existingTexte||"")}</textarea>
+    <div class="grid2" style="margin-top:8px;">
+      <div class="field" style="margin-bottom:0;">
+        <label>📄 Word modifié (optionnel)</label>
+        <input type="file" id="retourWord-${idSuffix}" accept=".doc,.docx">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>📊 Excel modifié (optionnel)</label>
+        <input type="file" id="retourExcel-${idSuffix}" accept=".xls,.xlsx,.csv">
+      </div>
+    </div>
+  `;
+}
+function renderRetourSection(reportId, isResponsable){
+  const rounds = roundsFor(reportId);
+  const canAddNewRound = isResponsable && rounds.length < MAX_ROUNDS;
+  const lastRoundNum = rounds.length ? rounds[rounds.length-1].round : 0;
+
+  const roundCards = rounds.map(rnd=>{
+    const isCurrent = rnd.round === lastRoundNum;
+    const canEditThisRound = isResponsable && isCurrent;
+    const body = canEditThisRound
+      ? retourRoundFormFields(rnd.round, rnd.texte) + `
+        <div style="margin-top:8px;">
+          <button class="btn btn-primary" data-saveretourround="${rnd.round}">${rnd.texte ? "Mettre à jour ce retour" : "Enregistrer ce retour"}</button>
+        </div>
+        <div class="hint">Les fichiers sélectionnés sont joints automatiquement en cliquant sur « Enregistrer ».</div>
+      `
+      : `<div class="readonly-text ${rnd.texte ? "" : "empty"}">${rnd.texte ? escapeHtml(rnd.texte) : "—"}</div>`;
+
+    let responseSection = "";
+    if (isCurrent){
+      const nbConcerned = DOMAINES.filter(d=>{ const rm=remarkFor(reportId,d.id); return rm && rm.texte && rm.texte.trim(); }).length;
+      const nbRepondu = DOMAINES.filter(d=>{
+        const rm=remarkFor(reportId,d.id);
+        if (!rm || !rm.texte || !rm.texte.trim()) return false;
+        const resp = retourReponseFor(reportId, d.id, rnd.round);
+        return resp && resp.statutRetour && resp.statutRetour !== "en_attente";
+      }).length;
+      const respText = rnd.syntheseReponse || "";
+      const synthStatut = rnd.syntheseStatut || "brouillon";
+      const synthBadge = {
+        brouillon: `<span class="badge new">Brouillon</span>`,
+        valide: `<span class="badge validated">✓ Validée par le responsable</span>`,
+        envoye: `<span class="badge sent">📤 Envoyée à l'UO</span>`
+      }[synthStatut];
+      const synthLocked = synthStatut !== "brouillon";
+      let synthActions = "";
+      if (isResponsable){
+        synthActions = `
+          <div style="margin-bottom:8px;">
+            <button class="btn btn-outline" data-genretoursynth="${rnd.round}" ${synthLocked ? "disabled" : ""}>🔄 Générer la réponse (${nbRepondu}/${nbConcerned} systèmes traités)</button>
+          </div>
+          <textarea id="retourSynthText-${rnd.round}" style="min-height:110px;" ${synthLocked ? "readonly" : ""}>${escapeHtml(respText)}</textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            ${!synthLocked ? `<button class="btn btn-outline" data-saveretoursynth="${rnd.round}">Enregistrer brouillon</button>` : ""}
+            ${!synthLocked ? `<button class="btn btn-primary" data-validateretoursynth="${rnd.round}">Valider la réponse</button>` : ""}
+            ${synthStatut === "valide" ? `<button class="btn btn-outline" data-sendretoursynth="${rnd.round}">Envoyer à l'UO</button>` : ""}
+            ${synthStatut !== "brouillon" ? `<button class="btn btn-ghost" data-reopenretoursynth="${rnd.round}">↺ Rouvrir</button>` : ""}
+            <button class="btn btn-outline" data-copyretoursynth="${rnd.round}">📋 Copier pour email</button>
+          </div>
+        `;
+      }
+      responseSection = `
+        <div class="retour-sub" style="margin-top:14px;">
+          <div class="dh" style="margin-bottom:6px;">
+            <span class="name" style="font-size:12.5px;">📤 Synthèse de réponse à l'UO ${rnd.syntheseReponseDate ? "· générée le "+fmtDate(rnd.syntheseReponseDate) : ""}</span>
+            ${synthBadge}
+          </div>
+          ${rnd.syntheseDateValidation ? `<div class="hint" style="margin:0 0 8px;">Validée par ${escapeHtml(rnd.syntheseValidePar||"")} le ${fmtDate(rnd.syntheseDateValidation)}${rnd.syntheseDateEnvoi ? " · envoyée le "+fmtDate(rnd.syntheseDateEnvoi) : ""}</div>` : ""}
+          ${isResponsable ? synthActions : `
+            <div class="readonly-text ${respText ? "" : "empty"}">${respText ? escapeHtml(respText) : "Pas encore de synthèse de réponse."}</div>
+          `}
+          <div class="hint">Compile les positions (Validé / En cours + commentaire) de chaque ingénieur pour ce round, à renvoyer à l'UO. Le responsable doit valider la réponse avant de l'envoyer à l'UO.</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="retour-block" style="${rnd.round>1?"margin-top:14px;":""}${isCurrent?"":"opacity:.88;"}">
+        <h4>📥 Retour UO ${rounds.length>1 ? "— Round "+rnd.round+" " : ""}${isCurrent?"(en cours)":"(historique)"} · reçu le ${fmtDate(rnd.dateRetour)} (${rnd.auteur})</h4>
+        ${body}
+        ${retourAttListMarkup(reportId, rnd.round, isResponsable)}
+        ${responseSection}
+      </div>
+    `;
+  }).join("");
+
+  let extra = "";
+  if (canAddNewRound){
+    extra = `
+      <div class="retour-block" style="${rounds.length?"margin-top:14px;":""}border-style:dashed;">
+        <h4>➕ Nouveau retour UO ${rounds.length ? "(Round "+(rounds.length+1)+")" : ""}</h4>
+        ${retourRoundFormFields("new", "")}
+        <div style="margin-top:8px;">
+          <button class="btn btn-primary" id="btnSaveNewRound">${rounds.length ? "Enregistrer ce nouveau retour" : "Enregistrer le retour UO"}</button>
+        </div>
+      </div>
+    `;
+  } else if (rounds.length === 0){
+    extra = `<div class="retour-block"><h4>📥 Retour de l'UO</h4><div class="readonly-text empty">Pas encore de retour de l'UO.</div></div>`;
+  } else if (rounds.length >= MAX_ROUNDS && isResponsable){
+    extra = `<div class="hint" style="margin-top:10px;">Nombre maximum de retours UO atteint (${MAX_ROUNDS}).</div>`;
+  }
+
+  return roundCards + extra;
+}
+
+/* Historique des positions (Validé / En cours) d'un ingénieur pour un système,
+   à travers tous les rounds de retour UO existants. */
+function buildRetourSubBlocks(reportId, dom, rm, canEditDomain){
+  const rounds = roundsFor(reportId);
+  if (!rounds.length || !rm || !rm.texte || !rm.texte.trim()) return "";
+  const lastRoundNum = rounds[rounds.length-1].round;
+  return rounds.map(rnd=>{
+    const resp = retourReponseFor(reportId, dom.id, rnd.round);
+    const statutRetour = resp ? (resp.statutRetour || "en_attente") : "en_attente";
+    const rtagLabel = {valide:"✅ Validé", encours:"🔄 En cours", en_attente:"En attente de votre position"}[statutRetour];
+    const isCurrent = rnd.round === lastRoundNum;
+    const locked = statutRetour === "valide";
+    const roundLabel = rounds.length > 1 ? `Round ${rnd.round}` : "Suite au retour UO";
+    if (canEditDomain && isCurrent && !locked){
+      return `
+        <div class="retour-sub">
+          <div class="dh" style="margin-bottom:6px;">
+            <span class="name" style="font-size:12px;">${roundLabel}</span>
+            <span class="rtag ${statutRetour}">${rtagLabel}</span>
+          </div>
+          <select id="rstatut-${dom.id}-${rnd.round}" style="margin-bottom:8px;">
+            <option value="en_attente" ${statutRetour==="en_attente"?"selected":""}>En attente</option>
+            <option value="encours" ${statutRetour==="encours"?"selected":""}>En cours (je justifie)</option>
+            <option value="valide" ${statutRetour==="valide"?"selected":""}>Validé (je suis d'accord)</option>
+          </select>
+          <textarea id="rcomment-${dom.id}-${rnd.round}" placeholder="Votre justification ou votre accord sur ce retour...">${resp ? (resp.commentaire||"") : ""}</textarea>
+          <div class="hint" style="margin:6px 0 0;">⚠️ Une fois « Validé » enregistré, cette position est verrouillée.</div>
+          <div style="margin-top:8px;text-align:right;">
+            <button class="btn btn-primary" data-saveretour="${dom.id}" data-round="${rnd.round}">Enregistrer votre position</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="retour-sub">
+        <div class="dh" style="margin-bottom:4px;">
+          <span class="name" style="font-size:12px;">${roundLabel}${locked?" (verrouillé)":""}</span>
+          <span class="rtag ${statutRetour}">${rtagLabel}</span>
+        </div>
+        <div class="readonly-text ${resp && resp.commentaire ? "" : "empty"}">${resp && resp.commentaire ? escapeHtml(resp.commentaire) : "Pas encore de commentaire."}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openReportDialog(reportId){
+  const report = state.reports.find(r=>r.id===reportId);
+  if (!report) return;
+  const dlg = document.getElementById("reportDialog");
+  const role = roleObj();
+  const consol = consolFor(reportId);
+  const st = STATUT_LABELS[reportStatut(report)];
+  const isResponsable = role.type === "responsable";
+
+  const domainBlocks = DOMAINES.map(dom=>{
+    const rm = remarkFor(reportId, dom.id);
+    const canEdit = role.type === "ingenieur" && role.systemes && role.systemes.includes(dom.id);
+    const prio = rm ? rm.priorite : "moyenne";
+    if (canEdit){
+      return `
+        <div class="domain-block">
+          <div class="dh">
+            <span class="name">${dom.label} <span style="color:var(--accent);font-weight:400;font-size:11px;">(vous)</span></span>
+            <span class="who">${rm ? "modifié "+fmtDate(rm.updatedAt) : "aucune remarque"}</span>
+          </div>
+          <div class="field" style="margin-bottom:8px;display:flex;gap:8px;">
+            <select id="prio-${dom.id}" style="flex:1;">
+              <option value="faible" ${prio==="faible"?"selected":""}>Priorité: Faible</option>
+              <option value="moyenne" ${prio==="moyenne"?"selected":""}>Priorité: Moyenne</option>
+              <option value="critique" ${prio==="critique"?"selected":""}>Priorité: Critique</option>
+            </select>
+            <input type="number" id="nberr-${dom.id}" min="0" step="1" style="width:150px;" placeholder="Nb d'erreurs" value="${rm && rm.nbErreurs ? rm.nbErreurs : 0}" title="Nombre d'erreurs relevées pour ce domaine">
+          </div>
+          <textarea id="txt-${dom.id}" placeholder="Votre remarque sur le domaine ${dom.label.toLowerCase()} pour ${report.uo}...">${rm ? rm.texte : ""}</textarea>
+          <div style="margin-top:8px;text-align:right;">
+            <button class="btn btn-primary" data-savedom="${dom.id}">Enregistrer la remarque</button>
+          </div>
+          ${buildRetourSubBlocks(reportId, dom, rm, true)}
+        </div>
+      `;
+    }
+    return `
+      <div class="domain-block">
+        <div class="dh">
+          <span class="name">${dom.label}${rm ? `<span class="prio ${rm.priorite}">${rm.priorite}</span>`:""}${rm && rm.nbErreurs ? `<span class="prio" style="background:var(--red-soft);color:var(--red);">${rm.nbErreurs} erreur${rm.nbErreurs>1?"s":""}</span>`:""}</span>
+          <span class="who">${rm ? rm.auteur + " · " + fmtDate(rm.updatedAt) : ""}</span>
+        </div>
+        <div class="readonly-text ${rm && rm.texte ? "":"empty"}">${rm && rm.texte ? escapeHtml(rm.texte) : "En attente de la remarque de l'ingénieur "+dom.label.toLowerCase()+"."}</div>
+        ${buildRetourSubBlocks(reportId, dom, rm, false)}
+      </div>
+    `;
+  }).join("");
+
+  const draftDefault = buildSyntheseText(reportId);
+
+  const synthTexte = consol ? consol.texte : draftDefault;
+  const statutConsol = consol ? consol.statut : "brouillon";
+
+  let synthActions = "";
+  if (isResponsable){
+    synthActions = `
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" id="btnGenSynth">🔄 Générer la synthèse (tous les systèmes)</button>
+        <button class="btn btn-outline" id="btnSaveDraft">Enregistrer brouillon</button>
+        <button class="btn btn-primary" id="btnValidate">Valider la consolidation</button>
+        ${statutConsol==="valide" || statutConsol==="envoye" ? `<button class="btn btn-outline" id="btnMarkSent">Marquer comme envoyé à l'UO</button>` : ""}
+        ${statutConsol!=="brouillon" ? `<button class="btn btn-ghost" id="btnReopen">↺ Rouvrir</button>` : ""}
+      </div>
+    `;
+  }
+
+  const canUploadAtt = role.type !== "directeur";
+  const canDeleteReport = role.type === "responsable";
+  const tInfo = getTraitementInfo(report);
+
+  dlg.innerHTML = `
+    <div class="dlg-head">
+      <div>
+        <h3>${report.uo} — ${fmtPeriode(report.periode, report.type)} ${report.titre ? "· "+escapeHtml(report.titre) : ""}</h3>
+        <div class="meta">
+          <span class="type-tag">${reportTypeObj(report.type||"mensuel").label}</span> ·
+          Reçu le ${fmtDate(report.dateReception)} ·
+          <span class="badge ${st.cls}">${st.label}</span> ·
+          ${envoiBadge(getEnvoiInfo(report))}
+          ${traitementBadge(tInfo)}
+          ${totalErreurs(reportId) > 0 ? `· <span class="badge" style="background:var(--red-soft);color:var(--red);">${totalErreurs(reportId)} erreur${totalErreurs(reportId)>1?"s":""} au total</span>` : ""}
+        </div>
+      </div>
+      <button class="close-x" id="closeReport">✕</button>
+    </div>
+    <div class="dlg-body">
+      ${renderRetardJustification(report, consol, tInfo, isResponsable)}
+      ${renderAttachmentsSection(reportId, canUploadAtt)}
+      ${domainBlocks}
+      <div class="synth-box">
+        <h4>Synthèse consolidée ${consol && consol.dateValidation ? "· validée le "+fmtDate(consol.dateValidation) : ""} ${consol && consol.dateEnvoi ? "· envoyée le "+fmtDate(consol.dateEnvoi) : ""}</h4>
+        ${isResponsable
+          ? `<textarea id="synthText" style="min-height:140px;">${synthTexte}</textarea>`
+          : `<div class="readonly-text ${synthTexte?"":"empty"}">${synthTexte ? escapeHtml(synthTexte) : "Consolidation pas encore rédigée."}</div>`
+        }
+        ${synthActions}
+        <div class="hint">Cliquez sur « Générer la synthèse » pour compiler automatiquement les remarques déjà saisies par les 4 ingénieurs (tous systèmes) en un seul rapport. Vous pouvez ensuite le modifier librement avant validation.</div>
+      </div>
+      ${renderRetourSection(reportId, isResponsable)}
+    </div>
+    <div class="dlg-foot">
+      ${canDeleteReport ? `<button class="btn btn-outline" style="color:var(--red);margin-right:auto;" id="btnDeleteReport">🗑 Supprimer ce rapport</button>` : ""}
+      <button class="btn btn-outline" id="btnCopy">📋 Copier pour email</button>
+      <button class="btn btn-outline" id="closeReport2">Fermer</button>
+    </div>
+  `;
+
+  dlg.querySelector("#closeReport").addEventListener("click", ()=>dlg.close());
+  dlg.querySelector("#closeReport2").addEventListener("click", ()=>dlg.close());
+  const btnDel = dlg.querySelector("#btnDeleteReport");
+  if (btnDel) btnDel.addEventListener("click", async ()=>{
+    await deleteReport(reportId);
+    if (!state.reports.find(r=>r.id===reportId)) dlg.close();
+  });
+
+  const btnSaveRetardJustif = dlg.querySelector("#btnSaveRetardJustif");
+  if (btnSaveRetardJustif) btnSaveRetardJustif.addEventListener("click", async ()=>{
+    const cause = dlg.querySelector("#retardCause").value;
+    const commentaire = dlg.querySelector("#retardCommentaire").value;
+    if (!cause){ alert("Merci de sélectionner la cause du retard (équipe DG ou unité opérationnelle)."); return; }
+    btnSaveRetardJustif.disabled = true; btnSaveRetardJustif.textContent = "Enregistrement...";
+    await saveRetardJustification(reportId, cause, commentaire);
+    openReportDialog(reportId);
+  });
+
+  // Ouverture / téléchargement / suppression des pièces jointes
+  dlg.querySelectorAll("[data-openatt]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const att = state.attachments.find(a=>a.id===btn.dataset.openatt);
+      if (att) openAttachment(att);
+    });
+  });
+  dlg.querySelectorAll("[data-dlatt]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const att = state.attachments.find(a=>a.id===btn.dataset.dlatt);
+      if (att) downloadAttachment(att);
+    });
+  });
+  dlg.querySelectorAll("[data-delatt]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const att = state.attachments.find(a=>a.id===btn.dataset.delatt);
+      if (att){ await deleteAttachment(att); openReportDialog(reportId); }
+    });
+  });
+  const btnAddAtt = dlg.querySelector("#btnAddAtt");
+  if (btnAddAtt){
+    btnAddAtt.addEventListener("click", async ()=>{
+      const file = dlg.querySelector("#attFile").files[0];
+      const cat = dlg.querySelector("#attCategory").value;
+      if (!file){ alert("Choisissez un fichier à joindre."); return; }
+      btnAddAtt.disabled = true; btnAddAtt.textContent = "Envoi...";
+      await saveAttachment(reportId, cat, file);
+      openReportDialog(reportId);
+    });
+  }
+
+  DOMAINES.forEach(dom=>{
+    const btn = dlg.querySelector(`[data-savedom="${dom.id}"]`);
+    if (btn){
+      btn.addEventListener("click", async ()=>{
+        const texte = dlg.querySelector(`#txt-${dom.id}`).value;
+        const prio = dlg.querySelector(`#prio-${dom.id}`).value;
+        const nbErr = dlg.querySelector(`#nberr-${dom.id}`).value;
+        await saveRemark(reportId, dom.id, texte, prio, nbErr);
+        openReportDialog(reportId);
+      });
+    }
+  });
+  // Réponses des ingénieurs à un round de retour UO (une seule, celle du round courant, est éditable)
+  dlg.querySelectorAll("[data-saveretour]").forEach(rbtn=>{
+    rbtn.addEventListener("click", async ()=>{
+      const domId = rbtn.dataset.saveretour;
+      const round = parseInt(rbtn.dataset.round, 10);
+      const statutRetour = dlg.querySelector(`#rstatut-${domId}-${round}`).value;
+      const commentaire = dlg.querySelector(`#rcomment-${domId}-${round}`).value;
+      await saveRetourReponse(reportId, domId, round, statutRetour, commentaire);
+      openReportDialog(reportId);
+    });
+  });
+
+  if (isResponsable){
+    dlg.querySelector("#btnGenSynth").addEventListener("click", ()=>{
+      const ta = dlg.querySelector("#synthText");
+      const generated = buildSyntheseText(reportId);
+      if (!generated){
+        alert("Aucune remarque n'a encore été saisie par les ingénieurs pour ce rapport.");
+        return;
+      }
+      if (ta.value.trim() && ta.value.trim() !== generated.trim()){
+        if (!confirm("Remplacer le texte actuel par le rapport généré automatiquement à partir de toutes les remarques des systèmes ?")) return;
+      }
+      ta.value = generated;
+    });
+    dlg.querySelector("#btnSaveDraft").addEventListener("click", async ()=>{
+      await saveConsolidation(reportId, dlg.querySelector("#synthText").value, "brouillon");
+      openReportDialog(reportId);
+    });
+    dlg.querySelector("#btnValidate").addEventListener("click", async ()=>{
+      await saveConsolidation(reportId, dlg.querySelector("#synthText").value, "valide");
+      openReportDialog(reportId);
+    });
+    const sentBtn = dlg.querySelector("#btnMarkSent");
+    if (sentBtn) sentBtn.addEventListener("click", async ()=>{
+      await saveConsolidation(reportId, dlg.querySelector("#synthText").value, "envoye");
+      openReportDialog(reportId);
+    });
+    const reopenBtn = dlg.querySelector("#btnReopen");
+    if (reopenBtn) reopenBtn.addEventListener("click", async ()=>{
+      await saveConsolidation(reportId, dlg.querySelector("#synthText").value, "brouillon");
+      openReportDialog(reportId);
+    });
+
+    // Enregistrer un round de retour UO existant (le round courant, éditable)
+    dlg.querySelectorAll("[data-saveretourround]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const round = parseInt(btn.dataset.saveretourround, 10);
+        btn.disabled = true; btn.textContent = "Enregistrement...";
+        const texte = dlg.querySelector(`#retourText-${round}`).value;
+        const wordFile = dlg.querySelector(`#retourWord-${round}`).files[0];
+        const excelFile = dlg.querySelector(`#retourExcel-${round}`).files[0];
+        await saveRetourRound(reportId, round, texte);
+        if (wordFile) await saveAttachment(reportId, "retour_word", wordFile, round);
+        if (excelFile) await saveAttachment(reportId, "retour_excel", excelFile, round);
+        openReportDialog(reportId);
+      });
+    });
+    // Créer un nouveau round de retour UO
+    const btnSaveNewRound = dlg.querySelector("#btnSaveNewRound");
+    if (btnSaveNewRound) btnSaveNewRound.addEventListener("click", async ()=>{
+      btnSaveNewRound.disabled = true; btnSaveNewRound.textContent = "Enregistrement...";
+      const texte = dlg.querySelector("#retourText-new").value;
+      if (!texte || !texte.trim()){ alert("Merci de saisir le texte du retour de l'UO."); btnSaveNewRound.disabled=false; btnSaveNewRound.textContent="Enregistrer"; return; }
+      const wordFile = dlg.querySelector("#retourWord-new").files[0];
+      const excelFile = dlg.querySelector("#retourExcel-new").files[0];
+      const nextRound = roundsFor(reportId).length + 1;
+      await saveRetourRound(reportId, nextRound, texte);
+      if (wordFile) await saveAttachment(reportId, "retour_word", wordFile, nextRound);
+      if (excelFile) await saveAttachment(reportId, "retour_excel", excelFile, nextRound);
+      const reportForMail = state.reports.find(r=>r.id === reportId);
+      if (reportForMail) notifierIngenieursRetourUO(reportForMail, nextRound);
+      openReportDialog(reportId);
+    });
+    // Synthèse de réponse par round
+    dlg.querySelectorAll("[data-genretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const round = parseInt(btn.dataset.genretoursynth, 10);
+        const ta = dlg.querySelector(`#retourSynthText-${round}`);
+        const generated = buildRetourSyntheseText(reportId, round);
+        if (!generated){
+          alert("Aucun ingénieur n'a encore répondu à ce round de retour (Validé / En cours).");
+          return;
+        }
+        if (ta.value.trim() && ta.value.trim() !== generated.trim()){
+          if (!confirm("Remplacer le texte actuel par la réponse générée automatiquement à partir des positions des ingénieurs ?")) return;
+        }
+        ta.value = generated;
+      });
+    });
+    dlg.querySelectorAll("[data-saveretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const round = parseInt(btn.dataset.saveretoursynth, 10);
+        await saveRetourSynthese(reportId, round, dlg.querySelector(`#retourSynthText-${round}`).value, "brouillon");
+        openReportDialog(reportId);
+      });
+    });
+    // Le responsable valide la synthèse de réponse au retour UO (avant envoi).
+    dlg.querySelectorAll("[data-validateretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const round = parseInt(btn.dataset.validateretoursynth, 10);
+        const texte = dlg.querySelector(`#retourSynthText-${round}`).value;
+        if (!texte || !texte.trim()){ alert("La synthèse de réponse est vide. Merci de la rédiger avant de valider."); return; }
+        await saveRetourSynthese(reportId, round, texte, "valide");
+        openReportDialog(reportId);
+      });
+    });
+    // Le responsable marque la synthèse comme envoyée à l'UO (une fois validée), à l'image de l'analyse initiale.
+    dlg.querySelectorAll("[data-sendretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const round = parseInt(btn.dataset.sendretoursynth, 10);
+        const texte = dlg.querySelector(`#retourSynthText-${round}`) ? dlg.querySelector(`#retourSynthText-${round}`).value : "";
+        await saveRetourSynthese(reportId, round, texte, "envoye");
+        openReportDialog(reportId);
+      });
+    });
+    // Réouverture (retour à brouillon) en cas d'erreur avant l'envoi effectif.
+    dlg.querySelectorAll("[data-reopenretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const round = parseInt(btn.dataset.reopenretoursynth, 10);
+        const texte = dlg.querySelector(`#retourSynthText-${round}`) ? dlg.querySelector(`#retourSynthText-${round}`).value : (roundsFor(reportId).find(r=>r.round===round)||{}).syntheseReponse || "";
+        await saveRetourSynthese(reportId, round, texte, "brouillon");
+        openReportDialog(reportId);
+      });
+    });
+    dlg.querySelectorAll("[data-copyretoursynth]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const round = parseInt(btn.dataset.copyretoursynth, 10);
+        const texte = dlg.querySelector(`#retourSynthText-${round}`).value;
+        const emailText = `Réponse au retour UO — ${report.uo} — ${fmtPeriode(report.periode, report.type)}${roundsFor(reportId).length>1 ? " (Round "+round+")" : ""}\nDate: ${new Date().toLocaleDateString("fr-FR")}\n\n${texte}\n\n---\nRédigé par: ${displayName(roleObj())}`;
+        navigator.clipboard.writeText(emailText).then(()=>{
+          const original = btn.textContent;
+          btn.textContent = "✓ Copié !";
+          setTimeout(()=> btn.textContent = original, 1500);
+        });
+      });
+    });
+  }
+
+  dlg.querySelector("#btnCopy").addEventListener("click", ()=>{
+    const finalConsol = consolFor(reportId);
+    const texte = finalConsol ? finalConsol.texte : draftDefault;
+    const emailText = `Consolidation — Rapport d'activité ${report.uo} — ${fmtPeriode(report.periode, report.type)}\nDate: ${new Date().toLocaleDateString("fr-FR")}\n\n${texte}\n\n---\nRédigé par: ${finalConsol ? finalConsol.responsable : displayName(roleObj())}`;
+    navigator.clipboard.writeText(emailText).then(()=>{
+      const btn = dlg.querySelector("#btnCopy");
+      const original = btn.textContent;
+      btn.textContent = "✓ Copié !";
+      setTimeout(()=> btn.textContent = original, 1500);
+    });
+  });
+
+  dlg.showModal();
+}
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* =========================================================
+   MAIN RENDER
+   ========================================================= */
+function render(){
+  renderRoleChip();
+  if (!state.role){
+    renderRoleScreen();
+    document.getElementById("footerTip").textContent = "";
+    return;
+  }
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    ${renderConnectionBanner()}
+    ${state.connected ? renderTraitementBanner() : ""}
+    ${state.connected ? renderEnvoiBanner() : ""}
+    ${state.connected ? renderStats() : ""}
+    ${state.connected ? renderMoyenneErreursParUO() : ""}
+    ${state.connected ? renderFilterBar() : ""}
+    ${state.connected ? renderTable() : ""}
+  `;
+  bindConnectionBanner();
+  if (state.connected){
+    bindNotifBanners();
+    bindFilterBar();
+    bindTable();
+  }
+  document.getElementById("footerTip").textContent =
+    "Astuce : gardez ce fichier HTML et son dossier de données sur le même serveur partagé. Chaque personne l'ouvre depuis son poste et se connecte au même dossier de données.";
+  maybeOpenPendingReportFromLink();
+}
+
+/* Si l'appli a été ouverte via un lien email (?report=ID), on ouvre
+   automatiquement la fiche du rapport concerné, une seule fois. */
+function maybeOpenPendingReportFromLink(){
+  if (!state.pendingOpenReportId || !state.connected || !state.role) return;
+  const rid = state.pendingOpenReportId;
+  const exists = state.reports.some(r=>r.id===rid);
+  if (!exists) return; // rapport pas encore chargé ou id invalide : on réessaiera au prochain render
+  state.pendingOpenReportId = null;
+  openReportDialog(rid);
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+(async function init(){
+  const savedRole = localStorage.getItem("suivi-uo-role");
+  if (savedRole && ROLES.some(r=>r.id===savedRole)) state.role = savedRole;
+  render();
+  if (fsSupported){
+    await tryReconnect();
+    render();
+  }
+})();
+</script>
+</body>
+</html>

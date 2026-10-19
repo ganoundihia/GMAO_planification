@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyseur RJE — Service Maintenance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    /* SETRAM institutional palette — alignee sur les autres outils (MBF/RAM/Suivi) */
+    --teal-deep:#24537a;
+    --teal:#2f6690;
+    --teal-bright:#3f7db0;
+    --blue-deep:#1b3a56;
+    --bg:#f7f9fc;
+    --panel:#ffffff;
+    --panel-2:#f1f5fb;
+    --border:#e2e8f4;
+    --border-soft:#e8edf7;
+    --text:#0a1930;
+    --muted:#44537a;
+    --accent:#2f6690;
+    --accent-2:#24537a;
+    --urgent:#c8402c;
+    --urgent-bg:#fdeeec;
+    --haute:#c97a1a;
+    --haute-bg:#fdf1e2;
+    --moyenne:#a68a15;
+    --moyenne-bg:#fbf6df;
+    --ok:#1f8a56;
+    --ok-bg:#e9f6ef;
+    --shadow: 0 1px 2px rgba(10,25,48,.04), 0 6px 20px rgba(10,25,48,.06);
+    --mono: 'Inter', ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: 'Inter', "Segoe UI", -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:0 22px;}
+
+  /* ---- Institutional banner (mirrors the SETRAM RJE report header) ---- */
+  .banner{
+    background:linear-gradient(100deg, var(--blue-deep) 0%, var(--teal-deep) 45%, var(--teal-bright) 100%);
+    padding:22px 0;
+    margin-bottom:28px;
+    box-shadow:0 4px 18px rgba(10,50,58,.18);
+  }
+  .banner-inner{
+    max-width:1100px;margin:0 auto;padding:0 22px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand-mark{
+    width:44px;height:44px;border-radius:11px;flex-shrink:0;
+    background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.35);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand h1{font-size:18px;margin:0;letter-spacing:.01em;font-weight:700;color:#fff;}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:rgba(255,255,255,.78);}
+  .status-pill{
+    font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.85);
+    border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:6px 13px;
+    display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);}
+  .status-pill.live .status-dot{background:#5fe3b0;box-shadow:0 0 8px #5fe3b0;}
+
+  /* ---- Dropzone ---- */
+  .dropzone{
+    border:1.5px dashed var(--border);
+    border-radius:16px;
+    background:var(--panel);
+    padding:60px 24px;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:var(--panel-2);
+  }
+  .dropzone .icon{
+    width:52px;height:52px;margin:0 auto 18px;
+    border-radius:13px;
+    background:linear-gradient(135deg, var(--teal-deep), var(--teal-bright));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 16px rgba(15,122,130,.25);
+  }
+  .dropzone h2{font-size:18px;margin:0 0 6px;font-weight:700;color:var(--blue-deep);}
+  .dropzone p{font-size:13.5px;color:var(--muted);margin:0 0 20px;}
+  .btn{
+    font-family:var(--sans);font-size:13.5px;font-weight:600;
+    background:linear-gradient(100deg, var(--teal-deep), var(--teal-bright));
+    color:#fff;border:none;
+    padding:11px 20px;border-radius:9px;cursor:pointer;
+    box-shadow:0 4px 12px rgba(15,122,130,.25);
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .btn:hover{filter:brightness(1.06);}
+  .btn:active{transform:scale(0.98);}
+  .btn.ghost{
+    background:#fff;color:var(--blue-deep);border:1px solid var(--border);box-shadow:none;
+  }
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:16px;}
+
+  #fileInput{display:none;}
+
+  /* ---- Mode tabs ---- */
+  .mode-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .mode-tab{
+    flex:1;font-family:var(--sans);font-size:13px;font-weight:600;
+    background:var(--panel);color:var(--muted);border:1px solid var(--border);
+    padding:13px 16px;border-radius:11px;cursor:pointer;text-align:left;
+    box-shadow:var(--shadow);transition:border-color .15s ease, color .15s ease;
+  }
+  .mode-tab .mt-title{display:block;font-size:13.5px;color:var(--blue-deep);font-weight:700;margin-bottom:2px;}
+  .mode-tab .mt-sub{display:block;font-size:11.5px;color:var(--muted);}
+  .mode-tab.active{border-color:var(--accent);border-width:1.5px;background:linear-gradient(180deg,#fff,var(--panel-2));}
+  .mode-tab.active .mt-title{color:var(--accent);}
+
+  .file-chip-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0 4px;}
+  .file-chip{
+    font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:7px;padding:5px 10px;color:var(--teal-deep);font-weight:600;
+    display:flex;align-items:center;gap:6px;
+  }
+  .file-chip .rm{cursor:pointer;color:var(--urgent);font-weight:800;}
+
+  /* ---- Comparison table ---- */
+  .compare-table-wrap{overflow-x:auto;}
+  .compare-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .compare-table th{
+    text-align:left;color:#fff;font-weight:600;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;white-space:nowrap;
+    background:linear-gradient(100deg, var(--blue-deep), var(--teal-deep));
+  }
+  .compare-table th:first-child{border-radius:8px 0 0 0;}
+  .compare-table th:last-child{border-radius:0 8px 0 0;}
+  .compare-table td{padding:10px 12px;border-bottom:1px solid var(--border-soft);vertical-align:middle;white-space:nowrap;}
+  .compare-table tr:nth-child(even) td{background:var(--panel-2);}
+  .compare-table tr:last-child td{border-bottom:none;}
+  .compare-cell{display:inline-flex;align-items:center;gap:5px;}
+  .compare-cell.changed{position:relative;}
+  .compare-cell.changed::after{content:"●";color:var(--urgent);font-size:8px;margin-left:2px;}
+  .sys-name-cell{font-weight:700;color:var(--blue-deep);position:sticky;left:0;}
+
+  .change-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:13px;
+    padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow);border-left:4px solid var(--accent);
+  }
+  .change-card .sys-name{margin-bottom:8px;}
+  .change-seq{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;}
+  .change-seq .arrow{color:var(--muted);}
+  .change-seq .day-lbl{font-family:var(--mono);font-size:10px;color:var(--muted);}
+
+  .stable-chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .stable-chip{
+    display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);
+    border-radius:10px;padding:8px 13px;box-shadow:var(--shadow);font-size:12.5px;font-weight:600;color:var(--blue-deep);
+  }
+  .stable-chip.problem{border-left:3px solid var(--urgent);}
+  .stable-chip.ok{border-left:3px solid var(--ok);}
+
+  .recur-di-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .recur-di{
+    font-family:var(--mono);font-size:11.5px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:6px;padding:6px 10px;color:var(--teal-deep);font-weight:600;
+  }
+  .recur-di .n{color:var(--urgent);font-weight:800;}
+  #resultsCompare{display:none;}
+  #resultsCompare.show{display:block;}
+
+  /* ---- Correctif upload block ---- */
+  .correctif-box{
+    margin-top:18px;padding-top:18px;border-top:1px dashed var(--border);
+    text-align:left;
+  }
+  .correctif-box .cb-title{font-size:12.5px;font-weight:700;color:var(--blue-deep);margin-bottom:3px;}
+  .correctif-box .cb-sub{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .correctif-status{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--panel-2);border:1px solid var(--border);border-radius:9px;
+    padding:9px 12px;font-size:12px;
+  }
+  .correctif-status.loaded{border-left:3px solid var(--ok);}
+  .correctif-status .cs-name{font-family:var(--mono);color:var(--teal-deep);font-weight:700;}
+  .correctif-status .cs-count{color:var(--muted);}
+  .correctif-status .cs-rm{cursor:pointer;color:var(--urgent);font-weight:800;margin-left:auto;}
+
+  /* ---- DI matrix ---- */
+  .etat-di{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:5px;display:inline-block;white-space:nowrap;}
+  .etat-di.ok{background:var(--ok-bg);color:var(--ok);}
+  .etat-di.haute{background:var(--haute-bg);color:var(--haute);}
+  .etat-di.urgent{background:var(--urgent-bg);color:var(--urgent);}
+  .etat-di.inconnu{background:var(--panel-2);color:var(--muted);}
+  .day-mark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;font-size:12px;font-weight:800;}
+  .day-mark.present{background:var(--ok-bg);color:var(--ok);}
+  .day-mark.absent{background:var(--panel-2);color:var(--border);}
+  .recur-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .recur-pill.yes{background:var(--haute-bg);color:var(--haute);}
+  .recur-pill.no{background:var(--panel-2);color:var(--muted);}
+  .di-matrix-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .di-matrix-table th{
+    text-align:left;color:#fff;font-weight:600;font-size:10px;
+    text-transform:uppercase;letter-spacing:.03em;padding:9px 10px;white-space:nowrap;
+    background:linear-gradient(100deg, var(--blue-deep), var(--teal-deep));
+  }
+  .di-matrix-table th:first-child{border-radius:8px 0 0 0;}
+  .di-matrix-table th:last-child{border-radius:0 8px 0 0;}
+  .di-matrix-table td{padding:8px 10px;border-bottom:1px solid var(--border-soft);vertical-align:middle;white-space:nowrap;}
+  .di-matrix-table tr:nth-child(even) td{background:var(--panel-2);}
+  .di-matrix-table tr:last-child td{border-bottom:none;}
+  .di-cell{font-family:var(--mono);font-weight:700;color:var(--teal-deep);}
+  .di-titre-cell{white-space:normal;max-width:260px;font-size:11.5px;color:var(--muted);line-height:1.4;}
+
+  /* ---- Loading ---- */
+  .loading{
+    display:none;text-align:center;padding:70px 20px;color:var(--muted);
+  }
+  .loading.show{display:block;}
+  .spinner{
+    width:30px;height:30px;border-radius:50%;
+    border:3px solid var(--border);border-top-color:var(--accent);
+    margin:0 auto 16px;animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading p{font-size:13px;}
+
+  /* ---- Results ---- */
+  #results{display:none;}
+  #results.show{display:block;}
+
+  .meta-strip{
+    display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;
+  }
+  .meta-chip{
+    background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);
+    border-radius:10px;padding:11px 16px;font-size:12px;
+    display:flex;flex-direction:column;gap:3px;min-width:130px;
+  }
+  .meta-chip .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;}
+  .meta-chip .v{font-size:13.5px;color:var(--blue-deep);font-weight:600;}
+
+  .kpi-row{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:34px;
+  }
+  @media (max-width:780px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+  .kpi{
+    background:var(--panel);border:1px solid var(--border);border-radius:13px;
+    padding:18px;position:relative;overflow:hidden;box-shadow:var(--shadow);
+    border-top:3px solid var(--border);
+  }
+  .kpi .num{font-size:28px;font-weight:800;line-height:1;color:var(--blue-deep);}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);margin-top:9px;letter-spacing:.01em;font-weight:500;}
+  .kpi.urgent{border-top-color:var(--urgent);} .kpi.urgent .num{color:var(--urgent);}
+  .kpi.haute{border-top-color:var(--haute);} .kpi.haute .num{color:var(--haute);}
+  .kpi.ok{border-top-color:var(--ok);} .kpi.ok .num{color:var(--ok);}
+  .kpi.accent{border-top-color:var(--accent);} .kpi.accent .num{color:var(--accent);}
+
+  section{margin-bottom:38px;}
+  .section-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:6px;gap:10px;flex-wrap:wrap;
+  }
+  .section-head h2{
+    font-size:15.5px;margin:0;letter-spacing:.01em;font-weight:700;color:var(--blue-deep);
+    display:flex;align-items:center;gap:9px;
+  }
+  .section-head h2::before{
+    content:"";width:5px;height:16px;border-radius:3px;
+    background:linear-gradient(180deg, var(--teal-deep), var(--teal-bright));display:inline-block;
+  }
+  .section-head .count{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .section-sub{font-size:12.5px;color:var(--muted);margin:0 0 16px 14px;}
+
+  /* Action plan cards */
+  .action-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:13px;
+    padding:18px 20px;margin-bottom:11px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:120px 1fr;gap:18px;
+    border-left:4px solid var(--border);
+  }
+  .action-card.urgente{border-left-color:var(--urgent);}
+  .action-card.haute{border-left-color:var(--haute);}
+  .action-card.moyenne{border-left-color:var(--moyenne);}
+  @media (max-width:640px){.action-card{grid-template-columns:1fr;}}
+  .action-card .prio{
+    display:flex;flex-direction:column;gap:9px;align-items:flex-start;
+  }
+  .badge{
+    font-size:10.5px;font-weight:700;letter-spacing:.05em;
+    padding:5px 10px;border-radius:6px;text-transform:uppercase;white-space:nowrap;
+  }
+  .badge.urgente{background:var(--urgent-bg);color:var(--urgent);}
+  .badge.haute{background:var(--haute-bg);color:var(--haute);}
+  .badge.moyenne{background:var(--moyenne-bg);color:var(--moyenne);}
+  .badge.ok{background:var(--ok-bg);color:var(--ok);}
+  .sys-name{font-size:15px;font-weight:700;color:var(--blue-deep);}
+  .di-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .di-chip{
+    font-family:var(--mono);font-size:10.5px;background:var(--panel-2);
+    border:1px solid var(--border);border-radius:5px;padding:3px 8px;color:var(--teal-deep);font-weight:600;
+  }
+  .desc{font-size:13px;color:var(--muted);line-height:1.6;margin:9px 0 12px;}
+  .action-txt{
+    font-size:12.5px;color:var(--text);line-height:1.55;
+    background:var(--panel-2);border-left:3px solid var(--accent);
+    padding:10px 12px;border-radius:0 8px 8px 0;
+  }
+  .action-txt b{color:var(--teal-deep);font-weight:700;}
+
+  /* systems full table */
+  .sys-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .sys-table th{
+    text-align:left;color:#fff;font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.05em;padding:11px 14px;
+    background:linear-gradient(100deg, var(--blue-deep), var(--teal-deep));
+  }
+  .sys-table th:first-child{border-radius:8px 0 0 0;}
+  .sys-table th:last-child{border-radius:0 8px 0 0;}
+  .sys-table td{padding:12px 14px;border-bottom:1px solid var(--border-soft);vertical-align:top;}
+  .sys-table tr:nth-child(even) td{background:var(--panel-2);}
+  .sys-table tr:last-child td{border-bottom:none;}
+  .sys-table .comment{color:var(--muted);font-size:12.5px;line-height:1.55;max-width:480px;}
+  .etat-tag{font-size:11px;font-weight:700;padding:4px 9px;border-radius:5px;display:inline-block;}
+  .etat-tag.Dégradé{background:var(--urgent-bg);color:var(--urgent);}
+  .etat-tag.Indisponible{background:var(--haute-bg);color:var(--haute);}
+  .etat-tag.Nominal{background:var(--ok-bg);color:var(--ok);}
+  .panel-box{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:0;box-shadow:var(--shadow);overflow:hidden;}
+
+  /* events */
+  .event-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow);
+    padding:15px 20px;margin-bottom:10px;border-left:4px solid var(--accent-2);
+  }
+  .event-head{display:flex;gap:12px;align-items:baseline;margin-bottom:7px;flex-wrap:wrap;}
+  .event-time{font-family:var(--mono);font-size:12.5px;color:var(--teal-deep);font-weight:700;}
+  .event-tag{
+    font-size:10.5px;color:var(--teal-deep);font-weight:700;background:var(--panel-2);
+    padding:2px 8px;border-radius:5px;
+  }
+  .event-desc{font-size:13px;color:var(--muted);line-height:1.6;white-space:pre-line;}
+
+  .empty-note{
+    font-size:13px;color:var(--muted);padding:22px;text-align:center;
+    border:1.5px dashed var(--border);border-radius:12px;background:var(--panel-2);
+  }
+
+  footer{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    flex-wrap:wrap;margin-top:44px;padding-top:22px;border-top:1px solid var(--border);
+  }
+  .disclaimer{font-size:11.5px;color:var(--muted);max-width:560px;line-height:1.55;}
+
+  details.raw{margin-top:12px;}
+  details.raw summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:600;}
+  details.raw pre{
+    white-space:pre-wrap;font-size:11px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px;max-height:260px;overflow:auto;margin-top:10px;box-shadow:var(--shadow);
+  }
+
+  @media print{
+    body{background:#fff;color:#000;padding:0;}
+    .banner{box-shadow:none;}
+    .dropzone,.status-pill,footer .btn,details.raw summary{display:none !important;}
+    .action-card,.kpi,.meta-chip,.event-card,.panel-box{box-shadow:none !important;}
+  }
+
+/* ===== Ambient background — shared across the whole site (source: Suivi des Performances) ===== */
+.bg-balls{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.ball{position:absolute;border-radius:50%;filter:blur(72px);will-change:transform;}
+.ball-1{width:400px;height:400px;background:radial-gradient(circle at 40% 40%, rgba(47,102,144,.38) 0%, rgba(47,102,144,.12) 45%, transparent 70%);top:-120px;left:100px;animation:blob-drift-1 28s ease-in-out infinite;}
+.ball-2{width:320px;height:320px;background:radial-gradient(circle at 60% 40%, rgba(36,83,122,.32) 0%, rgba(36,83,122,.08) 50%, transparent 70%);top:20%;right:-80px;animation:blob-drift-2 34s ease-in-out infinite;}
+.ball-3{width:300px;height:300px;background:radial-gradient(circle at 50% 50%, rgba(31,157,111,.30) 0%, rgba(31,157,111,.08) 50%, transparent 70%);bottom:10%;left:8%;animation:blob-drift-3 38s ease-in-out infinite;}
+.ball-4{width:280px;height:280px;background:radial-gradient(circle, rgba(240,180,41,.26) 0%, transparent 65%);top:52%;right:25%;animation:blob-drift-4 30s ease-in-out infinite;}
+@keyframes blob-drift-1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}25%{transform:translate(60px,80px) scale(1.08) rotate(3deg);}50%{transform:translate(-30px,120px) scale(.96) rotate(-2deg);}75%{transform:translate(80px,40px) scale(1.05) rotate(1deg);}}
+@keyframes blob-drift-2{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(-80px,60px) scale(1.1);}66%{transform:translate(-50px,100px) scale(.93);}}
+@keyframes blob-drift-3{0%,100%{transform:translate(0,0) scale(1) rotate(0deg);}40%{transform:translate(70px,-60px) scale(1.07) rotate(-4deg);}80%{transform:translate(110px,-90px) scale(.94) rotate(2deg);}}
+@keyframes blob-drift-4{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-60px,50px) scale(1.12);}}
+@media (prefers-reduced-motion: reduce){.ball{animation:none !important;}}
+/* .bg-balls is position:fixed with z-index:0, which by CSS stacking rules
+   can render ABOVE plain unpositioned content — this forces every other
+   direct child of body to stack above it regardless of the page's own
+   wrapper class names. */
+body > *:not(.bg-balls){position:relative;z-index:1;}
+</style>
+</head>
+<body>
+<div class="bg-balls" aria-hidden="true"><div class="ball ball-1"></div><div class="ball ball-2"></div><div class="ball ball-3"></div><div class="ball ball-4"></div></div>
+
+
+  <div class="banner">
+    <div class="banner-inner">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M3 17c3-6 6-9 9-9s6 3 9 9" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M3 17h18" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="8.5" cy="17" r="1.6" fill="#fff"/>
+            <circle cx="15.5" cy="17" r="1.6" fill="#fff"/>
+          </svg>
+        </div>
+        <div>
+          <h1>SETRAM · Service Maintenance</h1>
+          <p>Analyseur du Rapport Journalier d'Exploitation — plan d'action</p>
+        </div>
+      </div>
+      <div class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusTxt">en attente</span></div>
+    </div>
+  </div>
+
+<div class="wrap">
+
+  <div id="uploadZone">
+
+    <div class="mode-tabs">
+      <button type="button" class="mode-tab active" id="tabSingle" onclick="setMode('single')">
+        <span class="mt-title">Rapport unique</span>
+        <span class="mt-sub">Analyse d'un seul RJE (1 jour)</span>
+      </button>
+      <button type="button" class="mode-tab" id="tabCompare" onclick="setMode('compare')">
+        <span class="mt-title">Analyse comparative</span>
+        <span class="mt-sub">2 à 7 rapports — évolution sur plusieurs jours</span>
+      </button>
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      <div class="icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8"><path d="M12 3v12m0-12l-4 4m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      </div>
+      <h2 id="dzTitle">Importer le rapport journalier (PDF)</h2>
+      <p id="dzSub">Glissez-déposez le fichier ici, ou cliquez pour le sélectionner</p>
+      <button class="btn" type="button" id="dzBtn" onclick="document.getElementById('fileInput').click()">Choisir un fichier PDF</button>
+      <div class="file-chip-list" id="fileChipList"></div>
+      <div id="compareActions" style="display:none;margin-top:16px;">
+        <button class="btn ghost" type="button" onclick="document.getElementById('fileInput').click()">Ajouter un fichier</button>
+        <button class="btn" type="button" onclick="runComparison()" id="runCompareBtn" disabled style="margin-left:8px;">Comparer les rapports</button>
+      </div>
+      <div class="correctif-box" id="correctifBox" style="display:none;">
+        <div class="cb-title">Fichier correctif des DI (optionnel)</div>
+        <div class="cb-sub">Importez votre export Excel des signalements (colonnes CODE_DI / ETAT_DI) pour afficher l'état de chaque DI dans la matrice comparative.</div>
+        <div class="correctif-status" id="correctifStatus">
+          <span>Aucun fichier correctif importé</span>
+          <button class="btn ghost" type="button" style="margin-left:auto;padding:6px 12px;font-size:12px;" onclick="document.getElementById('correctifInput').click()">Importer (.xlsx)</button>
+        </div>
+        <input type="file" id="correctifInput" accept=".xlsx,.xls">
+      </div>
+      <div class="hint">Traitement 100% local dans votre navigateur — aucun envoi du fichier</div>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf">
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p id="loadingTxt">Lecture du PDF…</p>
+  </div>
+
+  <div id="results">
+
+    <div class="meta-strip" id="metaStrip"></div>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <section>
+      <div class="section-head">
+        <h2>Plan d'action — Service Maintenance</h2>
+        <span class="count" id="planCount"></span>
+      </div>
+      <div class="section-sub">Anomalies système triées par priorité d'intervention, avec les numéros DI détectés et une action recommandée.</div>
+      <div id="actionPlan"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Événements signalés à la maintenance</h2>
+        <span class="count" id="eventsCount"></span>
+      </div>
+      <div class="section-sub">Événements du journal d'exploitation avisés à la maintenance CFA, à CITAL MR, ou classés « Systèmes ».</div>
+      <div id="eventsList"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>État complet des systèmes</h2>
+        <span class="count" id="sysCount"></span>
+      </div>
+      <div class="section-sub">Table intégrale extraite du rapport, y compris les systèmes nominaux, pour référence.</div>
+      <div class="panel-box">
+        <table class="sys-table" id="sysTable"></table>
+      </div>
+    </section>
+
+    <details class="raw">
+      <summary>Afficher le texte brut extrait du PDF (contrôle qualité)</summary>
+      <pre id="rawText"></pre>
+    </details>
+
+    <footer>
+      <div class="disclaimer">
+        Analyse générée automatiquement par extraction de texte. Les libellés, états et numéros DI sont détectés par reconnaissance de motifs sur la mise en page du rapport SETRAM ; vérifiez le rapport original avant toute décision critique.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="exportExcelSingle()">Exporter en Excel</button>
+        <button class="btn ghost" onclick="window.print()">Exporter / Imprimer</button>
+        <button class="btn ghost" onclick="resetApp()">Importer un autre rapport</button>
+      </div>
+    </footer>
+
+  </div>
+
+  <div id="resultsCompare">
+
+    <div class="meta-strip" id="cmpMetaStrip"></div>
+
+    <div class="kpi-row" id="cmpKpiRow"></div>
+
+    <section>
+      <div class="section-head">
+        <h2>Ce qui a changé</h2>
+        <span class="count" id="cmpChangedCount"></span>
+      </div>
+      <div class="section-sub">Systèmes dont l'état a évolué au moins une fois entre le premier et le dernier rapport de la période.</div>
+      <div id="cmpChanged"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Ce qui est resté identique</h2>
+        <span class="count" id="cmpStableCount"></span>
+      </div>
+      <div class="section-sub">Systèmes dont l'état n'a pas varié sur toute la période — utile pour repérer les problèmes chroniques non résolus.</div>
+      <div class="stable-chip-row" id="cmpStable"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Matrice des DI</h2>
+        <span class="count" id="cmpDiCount"></span>
+      </div>
+      <div class="section-sub" id="cmpDiSub">Numéros DI détectés sur la période : jours d'apparition (récurrence) et, si le fichier correctif est importé, état réel de chaque DI.</div>
+      <div class="panel-box compare-table-wrap" style="padding:2px;">
+        <table class="di-matrix-table" id="cmpDiTable"></table>
+      </div>
+      <div class="recur-di-row" id="cmpDi" style="margin-top:10px;"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Tableau comparatif — état par jour</h2>
+        <span class="count" id="cmpTableCount"></span>
+      </div>
+      <div class="section-sub">État de chaque système pour chacun des rapports importés, triés par date. Le point rouge marque un changement par rapport au rapport précédent.</div>
+      <div class="panel-box compare-table-wrap">
+        <table class="compare-table" id="cmpTable"></table>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Événements de maintenance par jour</h2>
+        <span class="count" id="cmpEventsCount"></span>
+      </div>
+      <div class="section-sub">Nombre d'événements signalés à la maintenance pour chaque rapport de la période.</div>
+      <div id="cmpEvents"></div>
+    </section>
+
+    <footer>
+      <div class="disclaimer">
+        Analyse comparative générée automatiquement à partir de plusieurs Rapports Journaliers d'Exploitation. Vérifiez les rapports originaux avant toute décision critique.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="exportExcelCompare()">Exporter en Excel</button>
+        <button class="btn ghost" onclick="window.print()">Exporter / Imprimer</button>
+        <button class="btn ghost" onclick="resetApp()">Importer d'autres rapports</button>
+      </div>
+    </footer>
+
+  </div>
+
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ---------- Reference data ----------
+// Ordered longest-name-first within groups to avoid substring collisions (e.g. "Eclairage voie" vs "Voie")
+const SYSTEMS_BY_SPECIFICITY = [
+  'Eclairage voie','Eclairage Station','Téléphonie','Valideur','Energie',
+  'Voie','SAE','GTE','ATS','FPT','ADV','SLT','LAC','GTC','CCTV','SFE','Radio','TPVS'
+];
+
+const CRITICAL_SYSTEMS = new Set(['Voie','SAE','ATS','ADV','SFE','Radio','Téléphonie','GTE']);
+
+const ACTIONS = {
+  'Voie': "Planifier une intervention de la maintenance Voie pour lever les limitations de vitesse et rétablir les zones interdites à la circulation.",
+  'SAE': "Diagnostiquer le SAE avec CITAL MR / maintenance CFA : corriger les discordances de position et les BIV absents.",
+  'GTE': "Intervenir sur les sous-stations électriques concernées pour rétablir la communication GTE.",
+  'ATS': "Solliciter la maintenance signalisation pour lever les blocages restrictifs sur le terrain et vérifier la cohérence des signaux de manœuvre de remisage.",
+  'FPT': "Rétablir l'alimentation FPT sur les voies de remisage concernées au dépôt.",
+  'Energie': "Aucune action requise — système nominal.",
+  'ADV': "Planifier une intervention sur les appareils de voie (ADV) pour lever les interdictions de manœuvre et de circulation.",
+  'SLT': "Vérifier la signalisation lumineuse de tunnel (SLT) sur les points signalés absents ou clignotants.",
+  'LAC': "Aucune action requise — système nominal.",
+  'Eclairage voie': "Planifier une intervention sur l'éclairage de voie sur les tronçons signalés partiellement éteints.",
+  'GTC': "Aucune action requise — système nominal.",
+  'CCTV': "Intervenir sur les équipements CCTV en panne (postes de commande, claviers, caméras hors service).",
+  'SFE': "Intervenir sur les blocs de signalisation SFE signalés en défaut (inclinaison, bloc manquant).",
+  'Téléphonie': "Rétablir en urgence les lignes téléphoniques de sûreté indisponibles (wilaya / gendarmerie / protection civile).",
+  'Radio': "Diagnostiquer la couverture radio TETRA sur les tronçons signalés en perte de réception au PCC.",
+  'Valideur': "Aucune action requise — système nominal.",
+  'TPVS': "Aucune action requise — système nominal.",
+  'Eclairage Station': "Planifier une intervention sur l'éclairage des stations listées en défaut."
+};
+
+const MAINT_KEYWORDS = /maintenance|cital/i;
+
+// ---------- UI wiring ----------
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const loading = document.getElementById('loading');
+const loadingTxt = document.getElementById('loadingTxt');
+const results = document.getElementById('results');
+const uploadZone = document.getElementById('uploadZone');
+const statusPill = document.getElementById('statusPill');
+const statusTxt = document.getElementById('statusTxt');
+
+const resultsCompare = document.getElementById('resultsCompare');
+const dzTitle = document.getElementById('dzTitle');
+const dzSub = document.getElementById('dzSub');
+const dzBtn = document.getElementById('dzBtn');
+const fileChipList = document.getElementById('fileChipList');
+const compareActions = document.getElementById('compareActions');
+const runCompareBtn = document.getElementById('runCompareBtn');
+
+const MAX_COMPARE_FILES = 7;
+let currentMode = 'single';
+let pendingFiles = []; // { file } for compare mode
+let lastSingleAnalysis = null;
+let lastSingleFileName = null;
+let lastComparison = null;
+
+// ---------- Correctif (DI database) state ----------
+const correctifInput = document.getElementById('correctifInput');
+const correctifStatus = document.getElementById('correctifStatus');
+let correctifIndex = null;   // Map<normalizedNumber, Array<record>>
+let correctifMeta = null;    // { fileName, count }
+
+const ETAT_DI_CLASS = {
+  'a transmettre': 'urgent',
+  'transmis': 'haute',
+  'traîtée': 'ok',
+  'traitee': 'ok',
+  'réalisé': 'ok',
+  'realise': 'ok'
+};
+
+function etatDiClass(etat){
+  if (!etat) return 'inconnu';
+  return ETAT_DI_CLASS[etat.toLowerCase().trim()] || 'inconnu';
+}
+
+function normalizeDiNumber(raw){
+  // Keeps digits only, then strips leading zeros -> comparable short form ("0017819" -> "17819")
+  const digits = String(raw).replace(/\D/g, '');
+  if (!digits) return null;
+  return String(parseInt(digits, 10));
+}
+
+// Extracts ONLY the trailing sequence number from a full DI code like "DI-ALG-2023-0007555"
+// -> "7555" (site and year digits must NOT be included in the comparison key).
+function diShortFromFullCode(codeDi){
+  const s = String(codeDi).trim();
+  const m = s.match(/^DI-([A-Za-z0-9]+)-(\d{4})-0*(\d+)/);
+  if (m) return { shortNum: m[3], site: m[1], année: Number(m[2]) };
+  // fallback: take the last dash-separated segment only
+  const parts = s.split('-');
+  const last = parts[parts.length - 1];
+  const shortNum = normalizeDiNumber(last);
+  return { shortNum, site: null, année: null };
+}
+
+// Normalizes a DI number as extracted from the daily report (e.g. "7555", "0007555",
+// or occasionally "7555-1234" for a sub-reference) down to the same short form,
+// taking only the part BEFORE any dash so it isn't merged with a suffix.
+function diShortFromReport(raw){
+  const s = String(raw).trim();
+  const main = s.split('-')[0];
+  return normalizeDiNumber(main);
+}
+
+function findColIndex(headerRow, candidates){
+  const norm = s => String(s || '').trim().toLowerCase().replace(/[\s_]+/g, '');
+  const headerNorm = headerRow.map(norm);
+  for (const c of candidates){
+    const cn = norm(c);
+    const idx = headerNorm.indexOf(cn);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+async function loadCorrectifFile(file){
+  correctifStatus.innerHTML = '<span>Lecture du fichier correctif…</span>';
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!rows.length) throw new Error('Feuille vide');
+    const header = rows[0];
+    const idx = {
+      codeDi: findColIndex(header, ['CODE_DI']),
+      etatDi: findColIndex(header, ['ETAT_DI']),
+      systeme: findColIndex(header, ['SYSTEME']),
+      titreDi: findColIndex(header, ['TITRE_DI']),
+      commentaireDi: findColIndex(header, ['COMMENTAIRE_DI']),
+      dateDi: findColIndex(header, ['DATE_DI']),
+      equipement: findColIndex(header, ['EQUIPEMENT']),
+      emplacement: findColIndex(header, ['EMPLACEMENT']),
+      codeBt: findColIndex(header, ['CODE_BT']),
+      etatBt: findColIndex(header, ['ETAT_BT'])
+    };
+    if (idx.codeDi === -1) throw new Error("Colonne CODE_DI introuvable dans le fichier.");
+    const index = new Map();
+    for (let r = 1; r < rows.length; r++){
+      const row = rows[r];
+      const codeDi = row[idx.codeDi];
+      if (!codeDi) continue;
+      const parsed = diShortFromFullCode(codeDi);
+      const shortNum = parsed.shortNum;
+      if (!shortNum) continue;
+      const record = {
+        full: String(codeDi),
+        site: parsed.site,
+        année: parsed.année,
+        état: idx.etatDi !== -1 ? String(row[idx.etatDi] || '').trim() : '',
+        système: idx.systeme !== -1 ? String(row[idx.systeme] || '').trim() : '',
+        titre: idx.titreDi !== -1 ? String(row[idx.titreDi] || '').trim() : '',
+        commentaire: idx.commentaireDi !== -1 ? String(row[idx.commentaireDi] || '').trim() : '',
+        dateDi: idx.dateDi !== -1 ? row[idx.dateDi] : null,
+        equipement: idx.equipement !== -1 ? String(row[idx.equipement] || '').trim() : '',
+        emplacement: idx.emplacement !== -1 ? String(row[idx.emplacement] || '').trim() : '',
+        codeBt: idx.codeBt !== -1 ? String(row[idx.codeBt] || '').trim() : '',
+        etatBt: idx.etatBt !== -1 ? String(row[idx.etatBt] || '').trim() : ''
+      };
+      if (!index.has(shortNum)) index.set(shortNum, []);
+      index.get(shortNum).push(record);
+    }
+    correctifIndex = index;
+    correctifMeta = { fileName: file.name, count: rows.length - 1 };
+    renderCorrectifStatus();
+  } catch (err){
+    console.error(err);
+    correctifIndex = null;
+    correctifMeta = null;
+    renderCorrectifStatus();
+    alert("Impossible de lire le fichier correctif : " + err.message + "\n\nVérifiez qu'il contient bien une colonne CODE_DI (et idéalement ETAT_DI).");
+  }
+}
+
+function renderCorrectifStatus(){
+  correctifStatus.classList.toggle('loaded', !!correctifMeta);
+  if (!correctifMeta){
+    correctifStatus.innerHTML = `<span>Aucun fichier correctif importé</span>
+      <button class="btn ghost" type="button" style="margin-left:auto;padding:6px 12px;font-size:12px;" onclick="document.getElementById('correctifInput').click()">Importer (.xlsx)</button>`;
+    return;
+  }
+  correctifStatus.innerHTML = `
+    <span class="cs-name">${escapeHtml(correctifMeta.fileName)}</span>
+    <span class="cs-count">${correctifMeta.count} signalement(s) indexé(s)</span>
+    <span class="cs-rm" onclick="clearCorrectif()">✕ retirer</span>`;
+}
+
+function clearCorrectif(){
+  correctifIndex = null;
+  correctifMeta = null;
+  correctifInput.value = '';
+  renderCorrectifStatus();
+}
+
+correctifInput.addEventListener('change', e => {
+  if (e.target.files.length) loadCorrectifFile(e.target.files[0]);
+});
+
+// =====================================================================
+// CENTRE D'IMPORT — charge automatiquement le fichier Correctif partage
+// (meme fichier que Analyse MBF / Analyse RAM / Suivi des Performances)
+// dans la boite "Fichier correctif des DI" de l'analyse comparative.
+// =====================================================================
+const IMPORT_DB_NAME = "setram-import-hub";
+const IMPORT_STORE = "slots";
+function importDbOpen(){
+  return new Promise((res, rej)=>{
+    const req = indexedDB.open(IMPORT_DB_NAME, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(IMPORT_STORE);
+    req.onsuccess = ()=> res(req.result);
+    req.onerror = ()=> rej(req.error);
+  });
+}
+async function importSlotGet(slotId){
+  const db = await importDbOpen();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(IMPORT_STORE, "readonly");
+    const r = tx.objectStore(IMPORT_STORE).get(slotId);
+    r.onsuccess = ()=>res(r.result || null); r.onerror = ()=>rej(r.error);
+  });
+}
+(async function autoLoadCorrectifFromImportCenter(){
+  try{
+    const packed = await importSlotGet('corrective');
+    if (!packed || !packed.files || !packed.files.length) return;
+    // Le fichier Corrective partage peut contenir plusieurs fichiers (un par unite) :
+    // on les fusionne en une seule feuille avant de les passer au chargeur existant.
+    const files = packed.files.map(p => new File([p.data], p.name, {type:p.type, lastModified:p.lastModified}));
+    if (files.length === 1){
+      await loadCorrectifFile(files[0]);
+      return;
+    }
+    const XLSXmod = window.XLSX;
+    let merged = [];
+    let header = null;
+    for (let i=0; i<files.length; i++){
+      const f = files[i];
+      correctifStatus.innerHTML = `<span>Lecture du fichier ${i+1}/${files.length} (${f.name})…</span>`;
+      // laisse le navigateur respirer entre deux fichiers lourds pour éviter
+      // le message "Page ne répond pas / Attendre - Fermer"
+      await new Promise(res => setTimeout(res, 0));
+      const buf = await f.arrayBuffer();
+      const wb = XLSXmod.read(buf, { type: 'array', cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSXmod.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      if (!rows.length) continue;
+      if (!header) header = rows[0];
+      merged = merged.concat(rows.slice(1));
+    }
+    if (!header || !merged.length) return;
+    const wbOut = XLSXmod.utils.book_new();
+    const wsOut = XLSXmod.utils.aoa_to_sheet([header, ...merged]);
+    XLSXmod.utils.book_append_sheet(wbOut, wsOut, 'Corrective');
+    const outBuf = XLSXmod.write(wbOut, { type: 'array', bookType: 'xlsx' });
+    const mergedFile = new File([outBuf], `Corrective_fusionne_${files.length}_unites.xlsx`, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    await loadCorrectifFile(mergedFile);
+  }catch(e){ console.error("Centre d'Import : echec du chargement automatique du correctif", e); }
+})();
+
+function matchCorrectif(diRaw, relevantYears){
+  if (!correctifIndex) return null;
+  const diShort = diShortFromReport(diRaw);
+  if (!diShort) return { found: false };
+  const candidates = correctifIndex.get(diShort);
+  if (!candidates || candidates.length === 0) return { found: false };
+  if (candidates.length === 1) return { found: true, record: candidates[0], ambiguous: false };
+  const yearMatch = candidates.filter(c => c.année && relevantYears.has(c.année));
+  if (yearMatch.length === 1) return { found: true, record: yearMatch[0], ambiguous: false };
+  // fall back: most recent DATE_DI among candidates
+  const sorted = [...candidates].sort((a, b) => (b.dateDi ? new Date(b.dateDi).getTime() : 0) - (a.dateDi ? new Date(a.dateDi).getTime() : 0));
+  return { found: true, record: sorted[0], ambiguous: true, candidates };
+}
+
+function setMode(mode){
+  currentMode = mode;
+  document.getElementById('tabSingle').classList.toggle('active', mode === 'single');
+  document.getElementById('tabCompare').classList.toggle('active', mode === 'compare');
+  pendingFiles = [];
+  renderFileChips();
+  fileInput.value = '';
+  if (mode === 'single'){
+    fileInput.multiple = false;
+    dzTitle.textContent = 'Importer le rapport journalier (PDF)';
+    dzSub.textContent = 'Glissez-déposez le fichier ici, ou cliquez pour le sélectionner';
+    dzBtn.textContent = 'Choisir un fichier PDF';
+    dzBtn.style.display = 'inline-block';
+    compareActions.style.display = 'none';
+    document.getElementById('correctifBox').style.display = 'none';
+  } else {
+    fileInput.multiple = true;
+    dzTitle.textContent = 'Importer 2 à 7 rapports journaliers (PDF)';
+    dzSub.textContent = "Glissez-déposez les fichiers de la semaine, ou cliquez pour les sélectionner (Ctrl/Cmd + clic pour en choisir plusieurs)";
+    dzBtn.textContent = 'Choisir les fichiers PDF';
+    dzBtn.style.display = 'inline-block';
+    compareActions.style.display = 'none';
+    document.getElementById('correctifBox').style.display = 'block';
+  }
+}
+
+function renderFileChips(){
+  fileChipList.innerHTML = '';
+  pendingFiles.forEach((pf, i) => {
+    const chip = el('div', 'file-chip', `<span>${escapeHtml(pf.file.name)}</span><span class="rm" data-i="${i}">✕</span>`);
+    fileChipList.appendChild(chip);
+  });
+  fileChipList.querySelectorAll('.rm').forEach(rm => {
+    rm.addEventListener('click', e => {
+      const i = Number(e.target.dataset.i);
+      pendingFiles.splice(i, 1);
+      renderFileChips();
+      updateCompareActions();
+    });
+  });
+  if (currentMode === 'compare'){
+    compareActions.style.display = pendingFiles.length ? 'block' : 'none';
+    updateCompareActions();
+  }
+}
+
+function updateCompareActions(){
+  runCompareBtn.disabled = pendingFiles.length < 2;
+  runCompareBtn.textContent = pendingFiles.length < 2
+    ? `Comparer les rapports (ajoutez ${2 - pendingFiles.length} fichier${pendingFiles.length === 0 ? 's' : ''} min.)`
+    : `Comparer les ${pendingFiles.length} rapports`;
+}
+
+dropzone.addEventListener('click', (e) => {
+  // Don't hijack clicks on inner buttons/inputs (e.g. the correctif import button,
+  // "Comparer les rapports", "Ajouter un fichier") — they have their own handlers.
+  if (e.target.closest('button, input, .correctif-box')) return;
+  fileInput.click();
+});
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleIncomingFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleIncomingFiles([...e.target.files]); });
+
+function handleIncomingFiles(files){
+  const pdfs = files.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+  if (!pdfs.length){
+    alert("Merci d'importer un ou plusieurs fichiers PDF (rapport journalier d'exploitation).");
+    return;
+  }
+  if (currentMode === 'single'){
+    handleFile(pdfs[0]);
+    return;
+  }
+  // compare mode: accumulate, dedupe by name+size, cap at MAX_COMPARE_FILES
+  pdfs.forEach(f => {
+    if (pendingFiles.length >= MAX_COMPARE_FILES) return;
+    const dup = pendingFiles.some(pf => pf.file.name === f.name && pf.file.size === f.size);
+    if (!dup) pendingFiles.push({ file: f });
+  });
+  if (pendingFiles.length > MAX_COMPARE_FILES){
+    pendingFiles = pendingFiles.slice(0, MAX_COMPARE_FILES);
+  }
+  fileInput.value = '';
+  renderFileChips();
+}
+
+function resetApp(){
+  results.classList.remove('show');
+  resultsCompare.classList.remove('show');
+  uploadZone.style.display = 'block';
+  fileInput.value = '';
+  pendingFiles = [];
+  renderFileChips();
+  statusPill.classList.remove('live');
+  statusTxt.textContent = 'en attente';
+}
+
+async function handleFile(file){
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    alert("Merci d'importer un fichier PDF (rapport journalier d'exploitation).");
+    return;
+  }
+  uploadZone.style.display = 'none';
+  results.classList.remove('show');
+  loading.classList.add('show');
+  loadingTxt.textContent = 'Lecture du PDF…';
+  try {
+    const buf = await file.arrayBuffer();
+    loadingTxt.textContent = 'Extraction du texte…';
+    const pages = await extractPdfPages(buf);
+    loadingTxt.textContent = 'Analyse des systèmes et anomalies…';
+    const analysis = analyzeReport(pages);
+    renderResults(analysis, pages);
+    lastSingleAnalysis = analysis;
+    lastSingleFileName = file.name;
+    loading.classList.remove('show');
+    results.classList.add('show');
+    statusPill.classList.add('live');
+    statusTxt.textContent = 'rapport analysé';
+  } catch (err) {
+    console.error(err);
+    loading.classList.remove('show');
+    uploadZone.style.display = 'block';
+    alert("Impossible d'analyser ce PDF : " + err.message + "\n\nVérifiez qu'il s'agit bien d'un Rapport Journalier d'Exploitation SETRAM au format PDF texte (non scanné).");
+  }
+}
+
+async function runComparison(){
+  if (pendingFiles.length < 2) return;
+  uploadZone.style.display = 'none';
+  results.classList.remove('show');
+  resultsCompare.classList.remove('show');
+  loading.classList.add('show');
+  const entries = [];
+  try {
+    for (let i = 0; i < pendingFiles.length; i++){
+      const f = pendingFiles[i].file;
+      loadingTxt.textContent = `Lecture du rapport ${i + 1}/${pendingFiles.length} (${f.name})…`;
+      const buf = await f.arrayBuffer();
+      const pages = await extractPdfPages(buf);
+      const analysis = analyzeReport(pages);
+      entries.push({ fileName: f.name, analysis, dateKey: parseDateKey(analysis.header.date) });
+    }
+    loadingTxt.textContent = 'Comparaison des rapports…';
+    entries.sort((a, b) => {
+      if (a.dateKey && b.dateKey) return a.dateKey - b.dateKey;
+      if (a.dateKey) return -1;
+      if (b.dateKey) return 1;
+      return 0;
+    });
+    const cmp = buildComparison(entries);
+    renderComparison(cmp);
+    lastComparison = cmp;
+    loading.classList.remove('show');
+    resultsCompare.classList.add('show');
+    statusPill.classList.add('live');
+    statusTxt.textContent = `${entries.length} rapports comparés`;
+  } catch (err){
+    console.error(err);
+    loading.classList.remove('show');
+    uploadZone.style.display = 'block';
+    alert("Impossible de comparer ces rapports : " + err.message + "\n\nVérifiez qu'il s'agit bien de Rapports Journaliers d'Exploitation SETRAM au format PDF texte (non scannés).");
+  }
+}
+
+function parseDateKey(dateStr){
+  // expects DD-MM-YYYY
+  if (!dateStr) return null;
+  const m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).getTime();
+}
+
+function buildComparison(entries){
+  const order = ['Voie','SAE','GTE','ATS','FPT','Energie','ADV','SLT','LAC','Eclairage voie','GTC','CCTV','SFE','Téléphonie','Radio','Valideur','TPVS','Eclairage Station'];
+  const days = entries.map(e => ({
+    label: e.analysis.header.date || e.fileName,
+    fileName: e.fileName,
+    eventsCount: e.analysis.maintEvents.length,
+    diSet: new Set(e.analysis.allDI)
+  }));
+
+  const perSystem = order.map(sysName => {
+    const states = entries.map(e => {
+      const s = e.analysis.systems.find(x => x.système === sysName);
+      return s ? { état: s.état, commentaire: s.commentaire, di: s.di } : { état: 'non détecté', commentaire: '', di: [] };
+    });
+    const known = states.filter(s => s.état !== 'non détecté');
+    const distinctStates = new Set(known.map(s => s.état));
+    const changed = distinctStates.size > 1;
+    return { système: sysName, states, changed, alwaysSame: !changed && known.length > 0, lastState: known.length ? known[known.length - 1].état : null };
+  });
+
+  const changedSystems = perSystem.filter(s => s.changed);
+  const stableSystems = perSystem.filter(s => s.alwaysSame);
+
+  // ---- DI matrix: presence per day + matching against the correctif file ----
+  const dayYears = days.map(d => {
+    const m = String(d.label).match(/(\d{4})$/);
+    return m ? Number(m[1]) : null;
+  });
+
+  const diMap = new Map();
+  entries.forEach((e, i) => {
+    e.analysis.systems.forEach(s => {
+      s.di.forEach(di => {
+        if (!diMap.has(di)) diMap.set(di, { di, presence: new Array(entries.length).fill(false), systèmes: new Set() });
+        const rec = diMap.get(di);
+        rec.presence[i] = true;
+        rec.systèmes.add(s.système);
+      });
+    });
+  });
+
+  const diMatrix = [...diMap.values()].map(rec => {
+    const count = rec.presence.filter(Boolean).length;
+    const relevantYears = new Set(rec.presence.map((p, i) => p ? dayYears[i] : null).filter(Boolean));
+    return {
+      di: rec.di,
+      présence: rec.presence,
+      count,
+      récurrent: count >= 2,
+      systèmes: [...rec.systèmes],
+      correctif: matchCorrectif(rec.di, relevantYears)
+    };
+  }).sort((a, b) => b.count - a.count || a.di.localeCompare(b.di, undefined, { numeric: true }));
+
+  const recurringDI = diMatrix.filter(d => d.récurrent);
+
+  const totalIndispoLast = perSystem.filter(s => s.lastState === 'Indisponible').length;
+  const totalDegradeLast = perSystem.filter(s => s.lastState === 'Dégradé').length;
+
+  return { entries, days, perSystem, changedSystems, stableSystems, diMatrix, recurringDI, totalIndispoLast, totalDegradeLast };
+}
+
+function renderComparison(cmp){
+  // meta strip
+  const metaStrip = document.getElementById('cmpMetaStrip');
+  metaStrip.innerHTML = '';
+  const first = cmp.days[0], last = cmp.days[cmp.days.length - 1];
+  const metas = [
+    ['Période', `${first.label} → ${last.label}`],
+    ['Rapports analysés', String(cmp.entries.length)],
+    ['Systèmes ayant changé', String(cmp.changedSystems.length)],
+    ['Systèmes stables', String(cmp.stableSystems.length)]
+  ];
+  metas.forEach(([k, v]) => {
+    metaStrip.appendChild(el('div', 'meta-chip', `<div class="k">${k}</div><div class="v">${escapeHtml(v)}</div>`));
+  });
+
+  // kpis
+  const kpiRow = document.getElementById('cmpKpiRow');
+  kpiRow.innerHTML = '';
+  const kpis = [
+    ['Indisponibles (dernier jour)', cmp.totalIndispoLast, 'urgent'],
+    ['Dégradés (dernier jour)', cmp.totalDegradeLast, 'haute'],
+    ['Systèmes évolutifs', cmp.changedSystems.length, 'accent'],
+    ['DI récurrents', cmp.recurringDI.length, 'accent'],
+    ['Jours couverts', cmp.days.length, 'ok']
+  ];
+  kpis.forEach(([lbl, num, cls]) => {
+    kpiRow.appendChild(el('div', `kpi ${cls}`, `<div class="num">${num}</div><div class="lbl">${lbl}</div>`));
+  });
+
+  // changed systems
+  const changedEl = document.getElementById('cmpChanged');
+  changedEl.innerHTML = '';
+  document.getElementById('cmpChangedCount').textContent = cmp.changedSystems.length + ' système(s)';
+  if (cmp.changedSystems.length === 0){
+    changedEl.appendChild(el('div', 'empty-note', "Aucun changement d'état détecté sur la période : tous les systèmes détectés ont gardé le même état d'un rapport à l'autre."));
+  } else {
+    cmp.changedSystems.forEach(s => {
+      const card = el('div', 'change-card');
+      const seq = s.states.map((st, i) => {
+        const dayLbl = `<span class="day-lbl">${escapeHtml(cmp.days[i].label)}</span>`;
+        const tag = `<span class="etat-tag ${st.état === 'non détecté' ? 'Nominal' : st.état}" style="${st.état === 'non détecté' ? 'background:var(--panel-2);color:var(--muted);' : ''}">${escapeHtml(st.état)}</span>`;
+        const arrow = i < s.states.length - 1 ? '<span class="arrow">→</span>' : '';
+        return `<span style="display:flex;flex-direction:column;align-items:center;gap:3px;">${tag}${dayLbl}</span>${arrow}`;
+      }).join('');
+      card.innerHTML = `<div class="sys-name">${escapeHtml(s.système)}</div><div class="change-seq">${seq}</div>`;
+      changedEl.appendChild(card);
+    });
+  }
+
+  // stable systems
+  const stableEl = document.getElementById('cmpStable');
+  stableEl.innerHTML = '';
+  document.getElementById('cmpStableCount').textContent = cmp.stableSystems.length + ' système(s)';
+  if (cmp.stableSystems.length === 0){
+    stableEl.appendChild(el('div', 'empty-note', "Aucun système n'a gardé un état constant sur toute la période."));
+  } else {
+    cmp.stableSystems.forEach(s => {
+      const isProblem = s.lastState !== 'Nominal';
+      const chip = el('div', `stable-chip ${isProblem ? 'problem' : 'ok'}`,
+        `<span class="etat-tag ${s.lastState}">${escapeHtml(s.lastState)}</span><span>${escapeHtml(s.système)}</span>`);
+      stableEl.appendChild(chip);
+    });
+  }
+
+  // DI matrix
+  document.getElementById('cmpDiCount').textContent = `${cmp.diMatrix.length} DI détecté(s) — ${cmp.recurringDI.length} récurrent(s)`;
+  document.getElementById('cmpDiSub').textContent = correctifIndex
+    ? `Numéros DI détectés sur la période, avec leur état réel issu de « ${correctifMeta.fileName} » et les jours d'apparition (✓ = présent ce jour-là).`
+    : "Numéros DI détectés sur la période, avec les jours d'apparition (✓ = présent ce jour-là). Importez le fichier correctif pour afficher l'état réel de chaque DI.";
+
+  if (cmp.diMatrix.length === 0){
+    document.getElementById('cmpDiTable').innerHTML = '';
+    document.getElementById('cmpDi').innerHTML = '<div class="empty-note">Aucun numéro DI détecté sur la période.</div>';
+  } else {
+    const headCells = ['DI', 'Système(s)', 'État (correctif)', ...cmp.days.map(d => d.label), 'Récurrence'];
+    let rows = '<tr>' + headCells.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+    cmp.diMatrix.forEach(item => {
+      let etatCell;
+      if (!correctifIndex){
+        etatCell = '<span class="etat-di inconnu">Correctif non importé</span>';
+      } else if (!item.correctif || !item.correctif.found){
+        etatCell = '<span class="etat-di inconnu">Non trouvé</span>';
+      } else {
+        const rec = item.correctif.record;
+        const cls = etatDiClass(rec.état);
+        const ambig = item.correctif.ambiguous ? ' <span style="color:var(--muted);font-size:10px;">(approx.)</span>' : '';
+        const tip = escapeHtml(rec.full + (rec.titre ? ' — ' + rec.titre : ''));
+        etatCell = `<span class="etat-di ${cls}" title="${tip}">${escapeHtml(rec.état || '—')}</span>${ambig}`;
+      }
+      const dayCells = item.présence.map(p => `<td><span class="day-mark ${p ? 'present' : 'absent'}">${p ? '✓' : '·'}</span></td>`).join('');
+      const recurCell = item.récurrent
+        ? `<span class="recur-pill yes">Récurrent (${item.count}/${cmp.days.length})</span>`
+        : `<span class="recur-pill no">Isolé</span>`;
+      rows += `<tr>
+        <td class="di-cell">DI ${escapeHtml(item.di)}</td>
+        <td>${escapeHtml(item.systèmes.join(', '))}</td>
+        <td>${etatCell}</td>
+        ${dayCells}
+        <td>${recurCell}</td>
+      </tr>`;
+    });
+    document.getElementById('cmpDiTable').innerHTML = rows;
+
+    const diNoteEl = document.getElementById('cmpDi');
+    diNoteEl.innerHTML = '';
+    if (!correctifIndex){
+      diNoteEl.appendChild(el('div', 'empty-note', "Aucun fichier correctif importé — la colonne « État » reste vide. Cliquez sur « Importer d'autres rapports », importez le fichier correctif (.xlsx, colonnes CODE_DI / ETAT_DI), puis relancez la comparaison."));
+    } else {
+      const ambiguous = cmp.diMatrix.filter(d => d.correctif && d.correctif.ambiguous);
+      if (ambiguous.length){
+        diNoteEl.appendChild(el('div', 'empty-note', `${ambiguous.length} DI ont plusieurs correspondances possibles dans le fichier correctif (numéro réutilisé sur des années différentes) — l'état affiché correspond à la correspondance la plus récente ; vérifiez le numéro DI complet dans le fichier original si besoin.`));
+      }
+    }
+  }
+
+  // comparison table
+  document.getElementById('cmpTableCount').textContent = cmp.perSystem.length + ' systèmes × ' + cmp.days.length + ' rapports';
+  let rows = '<tr><th>Système</th>' + cmp.days.map(d => `<th>${escapeHtml(d.label)}</th>`).join('') + '</tr>';
+  cmp.perSystem.forEach(s => {
+    rows += `<tr><td class="sys-name-cell">${escapeHtml(s.système)}</td>`;
+    s.states.forEach((st, i) => {
+      const prev = i > 0 ? s.states[i - 1].état : null;
+      const isChange = prev !== null && st.état !== prev && st.état !== 'non détecté' && prev !== 'non détecté';
+      const tagCls = st.état === 'non détecté' ? '' : `etat-tag ${st.état}`;
+      const style = st.état === 'non détecté' ? 'color:var(--muted);font-size:11px;' : '';
+      rows += `<td><span class="compare-cell ${isChange ? 'changed' : ''}"><span class="${tagCls}" style="${style}">${escapeHtml(st.état)}</span></span></td>`;
+    });
+    rows += '</tr>';
+  });
+  document.getElementById('cmpTable').innerHTML = rows;
+
+  // events per day
+  const evEl = document.getElementById('cmpEvents');
+  evEl.innerHTML = '';
+  document.getElementById('cmpEventsCount').textContent = cmp.days.reduce((a, d) => a + d.eventsCount, 0) + ' événement(s) au total';
+  cmp.days.forEach(d => {
+    const card = el('div', 'event-card');
+    card.innerHTML = `<div class="event-head"><span class="event-time">${escapeHtml(d.label)}</span><span class="event-tag">${d.eventsCount} événement(s)</span></div>`;
+    evEl.appendChild(card);
+  });
+}
+
+// ---------- PDF text extraction (preserves original content-stream order,
+// which — for this report template — keeps each field's label/value/comment
+// correctly paired even when whole table sections are reordered) ----------
+async function extractPdfPages(arrayBuffer){
+  const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++){
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items.map(it => it.str).join('');
+    pages.push(text);
+  }
+  return pages;
+}
+
+// ---------- Parsing ----------
+function escapeRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function findSystemsPage(pages){
+  return pages.find(p => /Etat Des Syst[ée]mes/i.test(p)) || pages.find(p => /Système\s*Etat\s*Commentaires/i.test(p)) || '';
+}
+function findEventsPage(pages){
+  // events table usually spans the last page(s); merge any page containing typical event columns
+  return pages.filter(p => /Signalé par/i.test(p) || /Entit[ée]e?\s*avis[ée]e/i.test(p)).join('\n');
+}
+function findHeaderPage(pages){
+  return pages[0] || '';
+}
+
+function parseSystems(sysPageRaw){
+  if (!sysPageRaw) return [];
+  let working = sysPageRaw;
+  const ETAT_RE = '(Dégradé|Nominal|Indisponible)';
+  const matches = [];
+
+  SYSTEMS_BY_SPECIFICITY.forEach(sys => {
+    const re = new RegExp(escapeRe(sys) + '\\s*' + ETAT_RE, 'i');
+    const m = working.match(re);
+    if (m){
+      const start = m.index;
+      const end = start + m[0].length;
+      matches.push({ start, end, sys, etat: normalizeEtat(m[1]) });
+      // mask the matched span so shorter/overlapping names aren't re-matched
+      working = working.slice(0, start) + ' '.repeat(end - start) + working.slice(end);
+    }
+  });
+
+  matches.sort((a, b) => a.start - b.start);
+
+  const BOILERPLATE = [
+    /Synthèse Perte KM,?\s*Incidents et Faits marquants/gi,
+    /Etat Des Syst[ée]mes/gi,
+    /Syst[ée]me\s*Etat\s*Commentaires/gi
+  ];
+
+  const out = matches.map((m, i) => {
+    const nextStart = i + 1 < matches.length ? matches[i + 1].start : sysPageRaw.length;
+    let comment = sysPageRaw.slice(m.end, nextStart);
+    BOILERPLATE.forEach(re => comment = comment.replace(re, ' '));
+    comment = comment.replace(/\s+/g, ' ').trim();
+    return { système: m.sys, état: m.etat, commentaire: comment, di: extractDI(comment) };
+  });
+
+  // keep canonical report order (not alphabetical / not stream order) for the reference table
+  const order = ['Voie','SAE','GTE','ATS','FPT','Energie','ADV','SLT','LAC','Eclairage voie','GTC','CCTV','SFE','Téléphonie','Radio','Valideur','TPVS','Eclairage Station'];
+  out.sort((a, b) => order.indexOf(a.système) - order.indexOf(b.système));
+  return out;
+}
+
+function normalizeEtat(e){
+  const m = e.toLowerCase();
+  if (m.startsWith('dégrad')) return 'Dégradé';
+  if (m.startsWith('indispon')) return 'Indisponible';
+  return 'Nominal';
+}
+
+function extractDI(text){
+  const re = /DI\s*[nN]?°?\s*:?\s*(\d{3,7}(?:-\d{4})?)/g;
+  const found = new Set();
+  let m;
+  while ((m = re.exec(text)) !== null) found.add(m[1]);
+  return [...found];
+}
+
+function parseHeader(headerPageRaw){
+  const out = { date: null, tm: null, cadre: null };
+  const dm = headerPageRaw.match(/(\d{2}-\d{2}-\d{4})([A-Z]{2,6}_[A-Z0-9_]{4,})/);
+  if (dm){ out.date = dm[1]; out.tm = dm[2]; }
+  else {
+    const d2 = headerPageRaw.match(/\b\d{2}-\d{2}-\d{4}\b/);
+    if (d2) out.date = d2[0];
+  }
+  const cm = headerPageRaw.match(/([A-ZÀ-Ý][a-zà-ÿ]+)\s+([A-ZÀ-Ý]{2,})(?=A la pointe|Heure d'arriv)/);
+  if (cm) out.cadre = cm[1] + ' ' + cm[2];
+  return out;
+}
+
+function parseMaintenanceEvents(eventsPageRaw){
+  if (!eventsPageRaw) return [];
+  // Each row starts with a "HH:MMHH:MM" concatenated time pair (start time immediately followed by end time)
+  const timeRe = /(\d{2}:\d{2})(\d{2}:\d{2})/g;
+  const starts = [];
+  let m;
+  while ((m = timeRe.exec(eventsPageRaw)) !== null){
+    starts.push({ idx: m.index, h1: m[1], h2: m[2] });
+  }
+  const rows = starts.map((s, i) => {
+    const end = i + 1 < starts.length ? starts[i + 1].idx : eventsPageRaw.length;
+    const body = eventsPageRaw.slice(s.idx + s.h1.length + s.h2.length, end).trim();
+    return { h1: s.h1, h2: s.h2, body };
+  });
+  return rows
+    .filter(r => MAINT_KEYWORDS.test(r.body))
+    .map(r => {
+      const cleaned = r.body.replace(/\s+/g, ' ').trim();
+      const signale = /(?:Maintenance CFA|Maintenance voie|Maintenance CTA|CITAL MR)/gi;
+      const tags = [...new Set((cleaned.match(signale) || []))];
+      return { heure: r.h1 + ' – ' + r.h2, texte: cleaned, tags };
+    });
+}
+
+function analyzeReport(pages){
+  const sysPage = findSystemsPage(pages);
+  const eventsPage = findEventsPage(pages);
+  const headerPage = findHeaderPage(pages);
+
+  const systems = parseSystems(sysPage);
+  const header = parseHeader(headerPage);
+  const maintEvents = parseMaintenanceEvents(eventsPage);
+
+  const degrades = systems.filter(s => s.état === 'Dégradé');
+  const indispo = systems.filter(s => s.état === 'Indisponible');
+  const nominal = systems.filter(s => s.état === 'Nominal');
+  const allDI = new Set();
+  systems.forEach(s => s.di.forEach(d => allDI.add(d)));
+
+  const plan = systems
+    .filter(s => s.état !== 'Nominal')
+    .map(s => {
+      const critical = CRITICAL_SYSTEMS.has(s.système);
+      const priorite = s.état === 'Indisponible' ? 'Urgente' : (critical ? 'Haute' : 'Moyenne');
+      return { ...s, priorite };
+    });
+
+  const prioRank = { Urgente: 0, Haute: 1, Moyenne: 2 };
+  plan.sort((a, b) => prioRank[a.priorite] - prioRank[b.priorite]);
+
+  return { header, systems, plan, maintEvents, degrades, indispo, nominal, allDI: [...allDI] };
+}
+
+// ---------- Rendering ----------
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+function renderResults(a, pages){
+  // meta
+  const metaStrip = document.getElementById('metaStrip');
+  metaStrip.innerHTML = '';
+  const metas = [
+    ['Date du rapport', a.header.date || 'non détecté'],
+    ['TM', a.header.tm || 'non détecté'],
+    ["Cadre d'astreinte", a.header.cadre || 'non détecté'],
+    ['DI ouverts détectés', String(a.allDI.length)]
+  ];
+  metas.forEach(([k, v]) => {
+    metaStrip.appendChild(el('div', 'meta-chip', `<div class="k">${k}</div><div class="v">${escapeHtml(v)}</div>`));
+  });
+
+  // kpis
+  const kpiRow = document.getElementById('kpiRow');
+  kpiRow.innerHTML = '';
+  const kpis = [
+    ['Indisponible', a.indispo.length, 'urgent'],
+    ['Dégradés', a.degrades.length, 'haute'],
+    ['Nominaux', a.nominal.length, 'ok'],
+    ['DI détectés', a.allDI.length, 'accent'],
+    ['Événements maintenance', a.maintEvents.length, 'accent']
+  ];
+  kpis.forEach(([lbl, num, cls]) => {
+    kpiRow.appendChild(el('div', `kpi ${cls}`, `<div class="num">${num}</div><div class="lbl">${lbl}</div>`));
+  });
+
+  // action plan
+  const planEl = document.getElementById('actionPlan');
+  planEl.innerHTML = '';
+  document.getElementById('planCount').textContent = a.plan.length + ' anomalie(s)';
+  if (a.plan.length === 0){
+    planEl.appendChild(el('div', 'empty-note', "Aucune anomalie système détectée — tous les systèmes analysés sont Nominal."));
+  } else {
+    a.plan.forEach(item => {
+      const badgeClass = item.priorite.toLowerCase();
+      const card = el('div', `action-card ${badgeClass}`);
+      const diChips = item.di.length
+        ? item.di.map(d => `<span class="di-chip">DI ${escapeHtml(d)}</span>`).join('')
+        : '<span class="di-chip">Aucun DI identifié</span>';
+      card.innerHTML = `
+        <div class="prio">
+          <span class="badge ${badgeClass}">${item.priorite}</span>
+          <span class="etat-tag ${item.état}">${item.état}</span>
+        </div>
+        <div>
+          <div class="sys-name">${escapeHtml(item.système)}</div>
+          <div class="desc">${escapeHtml(item.commentaire) || '<em>Description non extraite — voir rapport original.</em>'}</div>
+          <div class="di-chips" style="margin-bottom:10px;">${diChips}</div>
+          <div class="action-txt"><b>Action recommandée —</b> ${escapeHtml(ACTIONS[item.système] || 'Diagnostiquer et planifier une intervention corrective.')}</div>
+        </div>`;
+      planEl.appendChild(card);
+    });
+  }
+
+  // events
+  const eventsEl = document.getElementById('eventsList');
+  eventsEl.innerHTML = '';
+  document.getElementById('eventsCount').textContent = a.maintEvents.length + ' événement(s)';
+  if (a.maintEvents.length === 0){
+    eventsEl.appendChild(el('div', 'empty-note', "Aucun événement avisé directement à la maintenance dans ce rapport."));
+  } else {
+    a.maintEvents.forEach(ev => {
+      const card = el('div', 'event-card');
+      card.innerHTML = `
+        <div class="event-head">
+          <span class="event-time">${escapeHtml(ev.heure)}</span>
+          ${ev.tags.map(t => `<span class="event-tag">${escapeHtml(t)}</span>`).join('')}
+        </div>
+        <div class="event-desc">${escapeHtml(ev.texte)}</div>`;
+      eventsEl.appendChild(card);
+    });
+  }
+
+  // full systems table
+  const sysTable = document.getElementById('sysTable');
+  document.getElementById('sysCount').textContent = a.systems.length + ' / 18 systèmes détectés';
+  let rows = `<tr><th>Système</th><th>État</th><th>DI</th><th>Commentaires</th></tr>`;
+  const order = ['Voie','SAE','GTE','ATS','FPT','Energie','ADV','SLT','LAC','Eclairage voie','GTC','CCTV','SFE','Téléphonie','Radio','Valideur','TPVS','Eclairage Station'];
+  order.forEach(sysName => {
+    const s = a.systems.find(x => x.système === sysName);
+    if (!s){
+      rows += `<tr><td>${sysName}</td><td colspan="3" style="color:var(--muted);font-size:11.5px;">non détecté dans le PDF</td></tr>`;
+      return;
+    }
+    const diTxt = s.di.length ? s.di.map(d => `DI ${d}`).join(', ') : '—';
+    rows += `<tr>
+      <td><b>${escapeHtml(s.système)}</b></td>
+      <td><span class="etat-tag ${s.état}">${s.état}</span></td>
+      <td style="font-family:var(--mono);font-size:11.5px;">${escapeHtml(diTxt)}</td>
+      <td class="comment">${escapeHtml(s.commentaire) || '—'}</td>
+    </tr>`;
+  });
+  sysTable.innerHTML = rows;
+
+  // raw text (QA)
+  document.getElementById('rawText').textContent = pages.map((p, i) => `----- PAGE ${i + 1} -----\n${p}`).join('\n\n');
+}
+
+// ---------- Excel export ----------
+function sanitizeFilename(s){
+  return String(s).replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
+function sheetFromAoa(aoa, colWidths){
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if (colWidths) ws['!cols'] = colWidths.map(w => ({ wch: w }));
+  return ws;
+}
+
+function exportExcelSingle(){
+  if (!lastSingleAnalysis){
+    alert("Aucun rapport analysé pour le moment.");
+    return;
+  }
+  if (typeof XLSX === 'undefined'){
+    alert("La librairie d'export Excel n'a pas pu se charger. Vérifiez votre connexion et réessayez.");
+    return;
+  }
+  const a = lastSingleAnalysis;
+  const wb = XLSX.utils.book_new();
+
+  // Résumé
+  const resume = [
+    ['Champ', 'Valeur'],
+    ['Fichier source', lastSingleFileName || ''],
+    ['Date du rapport', a.header.date || 'non détecté'],
+    ['TM', a.header.tm || 'non détecté'],
+    ["Cadre d'astreinte", a.header.cadre || 'non détecté'],
+    ['Systèmes indisponibles', a.indispo.length],
+    ['Systèmes dégradés', a.degrades.length],
+    ['Systèmes nominaux', a.nominal.length],
+    ['DI détectés', a.allDI.length],
+    ['Événements maintenance', a.maintEvents.length]
+  ];
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(resume, [28, 40]), 'Résumé');
+
+  // Plan d'action
+  const planAoa = [['Priorité', 'État', 'Système', 'DI', 'Commentaire', 'Action recommandée']];
+  a.plan.forEach(item => {
+    planAoa.push([
+      item.priorite, item.état, item.système,
+      item.di.length ? item.di.join(', ') : '',
+      item.commentaire || '',
+      ACTIONS[item.système] || 'Diagnostiquer et planifier une intervention corrective.'
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(planAoa, [11, 14, 16, 16, 50, 50]), "Plan d'action");
+
+  // État complet des systèmes
+  const sysOrder = ['Voie','SAE','GTE','ATS','FPT','Energie','ADV','SLT','LAC','Eclairage voie','GTC','CCTV','SFE','Téléphonie','Radio','Valideur','TPVS','Eclairage Station'];
+  const sysAoa = [['Système', 'État', 'DI', 'Commentaires']];
+  sysOrder.forEach(sysName => {
+    const s = a.systems.find(x => x.système === sysName);
+    if (!s){ sysAoa.push([sysName, 'non détecté', '', '']); return; }
+    sysAoa.push([s.système, s.état, s.di.length ? s.di.join(', ') : '', s.commentaire || '']);
+  });
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(sysAoa, [16, 14, 16, 60]), 'État systèmes');
+
+  // Événements maintenance
+  const evAoa = [['Heure', 'Texte', 'Tags']];
+  a.maintEvents.forEach(ev => evAoa.push([ev.heure, ev.texte, ev.tags.join(', ')]));
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(evAoa, [16, 70, 24]), 'Événements');
+
+  const fname = `Analyse_RJE_${sanitizeFilename(a.header.date || 'rapport')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+function exportExcelCompare(){
+  if (!lastComparison){
+    alert("Aucune comparaison disponible pour le moment.");
+    return;
+  }
+  if (typeof XLSX === 'undefined'){
+    alert("La librairie d'export Excel n'a pas pu se charger. Vérifiez votre connexion et réessayez.");
+    return;
+  }
+  const cmp = lastComparison;
+  const dayLabels = cmp.days.map(d => d.label);
+  const wb = XLSX.utils.book_new();
+
+  // Résumé
+  const first = cmp.days[0], last = cmp.days[cmp.days.length - 1];
+  const resume = [
+    ['Champ', 'Valeur'],
+    ['Période', `${first.label} → ${last.label}`],
+    ['Rapports analysés', cmp.entries.length],
+    ['Fichiers', cmp.entries.map(e => e.fileName).join(' | ')],
+    ['Systèmes ayant changé', cmp.changedSystems.length],
+    ['Systèmes stables', cmp.stableSystems.length],
+    ['DI détectés', cmp.diMatrix.length],
+    ['DI récurrents', cmp.recurringDI.length],
+    ['Indisponibles (dernier jour)', cmp.totalIndispoLast],
+    ['Dégradés (dernier jour)', cmp.totalDegradeLast],
+    ['Fichier correctif utilisé', correctifMeta ? correctifMeta.fileName : 'non importé']
+  ];
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(resume, [28, 50]), 'Résumé');
+
+  // Comparatif systèmes (tous)
+  const sysAoa = [['Système', ...dayLabels]];
+  cmp.perSystem.forEach(s => {
+    sysAoa.push([s.système, ...s.states.map(st => st.état)]);
+  });
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(sysAoa, [16, ...dayLabels.map(() => 14)]), 'Comparatif systèmes');
+
+  // Changements
+  const chgAoa = [['Système', ...dayLabels]];
+  cmp.changedSystems.forEach(s => {
+    chgAoa.push([s.système, ...s.states.map(st => st.état)]);
+  });
+  if (cmp.changedSystems.length === 0) chgAoa.push(['Aucun changement détecté sur la période']);
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(chgAoa, [16, ...dayLabels.map(() => 14)]), 'Changements');
+
+  // Systèmes stables
+  const stableAoa = [['Système', 'État constant sur la période']];
+  cmp.stableSystems.forEach(s => stableAoa.push([s.système, s.lastState]));
+  if (cmp.stableSystems.length === 0) stableAoa.push(['Aucun système constant sur la période']);
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(stableAoa, [16, 24]), 'Systèmes stables');
+
+  // Matrice DI
+  const diAoa = [['DI', 'Système(s)', 'État (correctif)', 'Site', 'Année', 'Récurrent', 'Occurrences', ...dayLabels]];
+  cmp.diMatrix.forEach(item => {
+    const rec = item.correctif && item.correctif.found ? item.correctif.record : null;
+    diAoa.push([
+      'DI ' + item.di,
+      item.systèmes.join(', '),
+      rec ? (rec.état || '') : (correctifIndex ? 'Non trouvé' : ''),
+      rec ? (rec.site || '') : '',
+      rec ? (rec.année || '') : '',
+      item.récurrent ? 'Oui' : 'Non',
+      `${item.count}/${cmp.days.length}`,
+      ...item.présence.map(p => p ? 'X' : '')
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(diAoa, [14, 16, 16, 8, 8, 10, 12, ...dayLabels.map(() => 6)]), 'Matrice DI');
+
+  // Événements par jour (résumé)
+  const evSummaryAoa = [['Jour', "Nombre d'événements"]];
+  cmp.days.forEach(d => evSummaryAoa.push([d.label, d.eventsCount]));
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(evSummaryAoa, [16, 20]), 'Événements (résumé)');
+
+  // Événements détail
+  const evDetailAoa = [['Jour', 'Heure', 'Texte', 'Tags']];
+  cmp.entries.forEach((e, i) => {
+    e.analysis.maintEvents.forEach(ev => {
+      evDetailAoa.push([cmp.days[i].label, ev.heure, ev.texte, ev.tags.join(', ')]);
+    });
+  });
+  if (evDetailAoa.length === 1) evDetailAoa.push(['Aucun événement de maintenance sur la période']);
+  XLSX.utils.book_append_sheet(wb, sheetFromAoa(evDetailAoa, [14, 16, 70, 24]), 'Événements (détail)');
+
+  const fname = `Comparaison_RJE_${sanitizeFilename(first.label)}_a_${sanitizeFilename(last.label)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+function escapeHtml(str){
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
