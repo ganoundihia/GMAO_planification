@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { handleGoogleRedirect } from './lib/googleAuth';
+import { installApiAuth } from './lib/apiAuth';
 
+installApiAuth();
 handleGoogleRedirect();
 
 createRoot(document.getElementById('root')!).render(

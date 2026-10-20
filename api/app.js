@@ -7,6 +7,7 @@ import cors from 'cors';
 import { createRateLimiters } from './_lib/rateLimit.js';
 import { idempotency } from './_lib/idempotency.js';
 import { requestLogger } from './_lib/logger.js';
+import { authenticate } from './_lib/auth.js';
 
 import chargeHandler from './charge.js';
 import atelier from './ateliers.js';
@@ -39,7 +40,7 @@ const KEY_REQUIRED = [
   { method: 'POST', path: '/api/profiles' },
 ];
 
-export function createApp({ env = process.env, rateLimits, idempotencyStore, logger } = {}) {
+export function createApp({ env = process.env, rateLimits, idempotencyStore, logger, verifyToken } = {}) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -71,12 +72,15 @@ export function createApp({ env = process.env, rateLimits, idempotencyStore, log
     app.use(p, limiters.sensitive);
   }
 
-  // ── 3. Parsing : 50 Mo seulement pour l'import, 5 Mo ailleurs ────────────
+  // ── 3. Authentification (JWT Supabase) + rôle, avant tout parsing ───────
+  app.use('/api', authenticate({ verifyToken }));
+
+  // ── 4. Parsing : 50 Mo seulement pour l'import, 5 Mo ailleurs ────────────
   app.use('/api/import', express.json({ limit: '50mb' }));
   app.use(express.json({ limit: '5mb' }));
   app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-  // ── 4. Idempotence des écritures ─────────────────────────────────────────
+  // ── 5. Idempotence des écritures ─────────────────────────────────────────
   app.use('/api', idempotency({
     store: idempotencyStore,
     required: (req) => KEY_REQUIRED.some(

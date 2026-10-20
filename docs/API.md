@@ -75,13 +75,27 @@ propage un `X-Request-Id`. Hors production, le corps des écritures est journali
 les clés `password`, `token`, `secret`, `authorization`, `apikey`, `service_role` sont masquées
 et les gros tableaux tronqués. En production (`NODE_ENV=production`) aucun corps n'est journalisé.
 
-## ⚠️ Authentification
+## Authentification et rôles
 
-Les routes `/api/*` n'exigent pas de jeton à ce jour : elles reposent sur le CORS et le rate
-limiting, ce qui **ne remplace pas** une authentification. Le serveur utilise la clé
-`service_role` Supabase (accès total). Avant toute exposition sur Internet, ajouter une
-vérification du JWT Supabase (`Authorization: Bearer …`) et un contrôle de rôle sur les routes
-d'écriture, en priorité `/api/profiles`.
+Chaque appel `/api/*` doit porter le jeton de session Supabase de l'utilisateur connecté :
+`Authorization: Bearer <access_token>`. Le front l'ajoute automatiquement à tous les appels
+vers l'API (`src/lib/apiAuth.ts`). Le serveur vérifie le jeton auprès de Supabase, lit le rôle
+dans `profiles`, et garde le résultat en cache 60 s (`api/_lib/auth.js`).
+
+| Route | Accès |
+|---|---|
+| `GET /api/fichiers/fiches` | public : la fiche s'ouvre par un simple lien, qui ne peut pas porter d'en-tête. Lecture confinée à `FICHES_ROOT`. |
+| `GET /api/profiles?user_id=…` ou `?email=…` | tout utilisateur connecté, pour **son propre** profil |
+| `/api/profiles` (liste, création, modification, suppression) | `super_admin` |
+| `POST /api/import` | `admin`, `super_admin` |
+| toutes les autres routes | utilisateur connecté ayant un profil |
+
+| Code | Statut | Cause |
+|---|---|---|
+| `AUTH_REQUIRED` | 401 | pas d'en-tête `Authorization` |
+| `AUTH_INVALID` | 401 | jeton expiré ou invalide |
+| `PROFILE_REQUIRED` | 403 | compte sans profil |
+| `FORBIDDEN` | 403 | rôle insuffisant |
 
 ## Tests
 

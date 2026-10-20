@@ -10,7 +10,7 @@ Ingénierie / Documents de SETRAM.
 | Frontend    | React 19, TypeScript, Vite 7, Tailwind CSS 4, React Router 7, Recharts |
 | API         | Node ≥ 20, Express 5, `express-rate-limit`                           |
 | Données     | Supabase (PostgreSQL + Auth + Realtime)                              |
-| Déploiement | Vercel (frontend + fonctions `api/`), ou serveur Node auto-hébergé   |
+| Déploiement | Render : https://planifiaction-setram.onrender.com                     |
 
 ## Démarrage rapide
 
@@ -87,10 +87,12 @@ Détails, codes d'erreur et limites : [`docs/API.md`](docs/API.md).
 ## Sécurité — à lire avant la mise en ligne
 
 - Les secrets vivent **uniquement** dans `.env` (ignoré par git) ou dans les variables
-  d'environnement de l'hébergeur — jamais dans `vercel.json` ni dans le code.
+  d'environnement de l'hébergeur — jamais dans le code.
   `SUPABASE_SERVICE_ROLE_KEY` contourne la RLS : ne jamais la préfixer par `VITE_`.
-- **L'API n'authentifie pas encore les appels** (voir `docs/API.md`). C'est le prochain chantier
-  de sécurité : vérifier le JWT Supabase et le rôle sur les routes d'écriture.
+- **Toutes les routes `/api/*` exigent le jeton Supabase** de l'utilisateur connecté
+  (`Authorization: Bearer …`, ajouté automatiquement par `src/lib/apiAuth.ts`) et vérifient son
+  rôle : gestion des comptes réservée au `super_admin`, import aux administrateurs.
+  Détails dans [`docs/API.md`](docs/API.md).
 - Si une clé a déjà été commitée dans un autre dépôt ou une ancienne branche, la **régénérer**
   dans Supabase (Project Settings → API) : la supprimer du code ne l'efface pas de l'historique.
 

@@ -65,7 +65,7 @@ function safeResolve(relPath) {
   const full = path.join(FICHES_ROOT, clean);
   // Vérifier que le chemin reste bien dans la racine
   const root = path.resolve(FICHES_ROOT);
-  if (!path.resolve(full).startsWith(root)) return null;
+  if (!path.resolve(full).startsWith(root + path.sep)) return null;
   return full;
 }
 

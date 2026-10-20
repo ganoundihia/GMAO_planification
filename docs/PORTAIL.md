@@ -17,7 +17,7 @@ npm run lint
 ```
 
 Planification's Supabase/API env vars still apply as before (see `.env` /
-Vercel project settings) — nothing about its auth or data layer changed.
+the host's environment settings) — nothing about its auth or data layer changed.
 
 ## Routing
 
